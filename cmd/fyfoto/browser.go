@@ -10,6 +10,7 @@ import (
 
 	"fyne.io/fyne"
 	"fyne.io/fyne/canvas"
+	"fyne.io/fyne/dialog"
 	"fyne.io/fyne/layout"
 	"fyne.io/fyne/theme"
 	"fyne.io/fyne/widget"
@@ -38,8 +39,8 @@ func fileIsImage(file string) bool {
 func populate(ff *FyFoto, dir string) {
 	ff.dirs.Objects = nil
 	ff.images.Objects = nil
-	if widget.Renderer(ff.info) != nil {
-		ff.info.SetText("Loading Images")
+	if widget.Renderer(ff.bInfo) != nil {
+		ff.bInfo.SetText("Loading Images")
 	}
 	canvas.Refresh(ff.dirs)
 	canvas.Refresh(ff.images)
@@ -63,7 +64,7 @@ func populate(ff *FyFoto, dir string) {
 				for workers := 0; workers < 4; workers++ {
 					quitQueue <- "stop"
 				}
-				populate(ff, parentDir)
+				go populate(ff, parentDir)
 			})
 		ff.dirs.AddObject(up)
 	}
@@ -78,7 +79,7 @@ func populate(ff *FyFoto, dir string) {
 						for workers := 0; workers < 4; workers++ {
 							quitQueue <- "stop"
 						}
-						populate(ff, newDir)
+						go populate(ff, newDir)
 					})
 				ff.dirs.AddObject(b)
 			} else if fileIsImage(dir + "/" + f.Name()) {
@@ -93,35 +94,39 @@ func populate(ff *FyFoto, dir string) {
 	if i > 0 {
 		output = fmt.Sprintf("Total: %d Images", i)
 	}
-	ff.info.SetText(output)
+	ff.bInfo.SetText(output)
 }
 
 func hideFolders(ff *FyFoto) {
 	ff.dirs.Hide()
-	ff.dscroller.Hide()
+	ff.dScroller.Hide()
 	ff.dirsHidden = 1
 	canvas.Refresh(ff.browser)
 }
 
 func showFolders(ff *FyFoto) {
 	ff.dirs.Show()
-	ff.dscroller.Show()
+	ff.dScroller.Show()
 	ff.dirsHidden = 0
 	canvas.Refresh(ff.browser)
 }
 
 func hideBrowser(ff *FyFoto) {
 	ff.images.Hide()
-	ff.iscroller.Hide()
+	ff.iScroller.Hide()
 	ff.dirs.Hide()
-	ff.dscroller.Hide()
+	ff.dScroller.Hide()
+	ff.bToolbar.Hide()
+	ff.bInfo.Hide()
 }
 
 func showBrowser(ff *FyFoto, dir string) {
 	ff.images.Show()
-	ff.iscroller.Show()
+	ff.iScroller.Show()
 	ff.dirs.Show()
-	ff.dscroller.Show()
+	ff.dScroller.Show()
+	ff.bToolbar.Show()
+	ff.bInfo.Show()
 	ff.window.SetTitle("FyFoto - " + dir)
 	canvas.Refresh(ff.main)
 
@@ -135,9 +140,26 @@ func createBrowser(ff *FyFoto) {
 	ff.images = fyne.NewContainerWithLayout(layout.NewFixedGridLayout(fyne.NewSize(128, 128)))
 	ff.dirs = fyne.NewContainerWithLayout(layout.NewVBoxLayout())
 
-	ff.iscroller = widget.NewScrollContainer(ff.images)
-	ff.dscroller = widget.NewScrollContainer(ff.dirs)
+	ff.iScroller = widget.NewScrollContainer(ff.images)
+	ff.dScroller = widget.NewScrollContainer(ff.dirs)
 
-	ff.browser = fyne.NewContainerWithLayout(layout.NewBorderLayout(nil, nil, ff.dscroller, nil),
-		ff.dscroller, ff.iscroller)
+	ff.bToolbar = widget.NewToolbar(
+		widget.NewToolbarAction(theme.FolderIcon(),
+			func() {
+				if ff.dirsHidden > 0 {
+					showFolders(ff)
+				} else {
+					hideFolders(ff)
+				}
+			}),
+		widget.NewToolbarSpacer(),
+		widget.NewToolbarAction(theme.SettingsIcon(),
+			func() {
+				dialog.ShowInformation("About", "FyFoto - A Cross-Platform Image Application", ff.window)
+			}))
+
+	ff.bInfo = widget.NewLabelWithStyle("No Images", fyne.TextAlignCenter, fyne.TextStyle{})
+
+	ff.browser = fyne.NewContainerWithLayout(layout.NewBorderLayout(ff.bToolbar, ff.bInfo, ff.dScroller, nil),
+		ff.bToolbar, ff.bInfo, ff.dScroller, ff.iScroller)
 }
