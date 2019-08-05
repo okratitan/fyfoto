@@ -109,7 +109,8 @@ func thumbnail(ff *FyFoto, thumbQueue <-chan gridImage, quitQueue <-chan string)
 			if &gi != nil && gi.imageDir == ff.currentDir {
 				gi.imageObject = canvas.NewImageFromFile(destfile)
 				gi.imageObject.FillMode = canvas.ImageFillContain
-				gi.imageObject.SetMinSize(fyne.NewSize(128, 128))
+				size := int(math.Floor(float64(128 * ff.window.Canvas().Scale())))
+				gi.imageObject.SetMinSize(fyne.NewSize(size, size))
 				gi.Append(gi.imageObject)
 
 				ff.images.AddObject(&gi)

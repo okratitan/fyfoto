@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -137,7 +138,8 @@ func showBrowser(ff *FyFoto, dir string) {
 }
 
 func createBrowser(ff *FyFoto) {
-	ff.images = fyne.NewContainerWithLayout(layout.NewFixedGridLayout(fyne.NewSize(128, 128)))
+	size := int(math.Floor(float64(128 * ff.window.Canvas().Scale())))
+	ff.images = fyne.NewContainerWithLayout(layout.NewFixedGridLayout(fyne.NewSize(size, size)))
 	ff.dirs = fyne.NewContainerWithLayout(layout.NewVBoxLayout())
 
 	ff.iScroller = widget.NewScrollContainer(ff.images)
