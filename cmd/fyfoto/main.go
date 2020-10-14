@@ -3,11 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/okratitan/fyfoto/ui"
 	"os/user"
 
 	"fyne.io/fyne"
 	"fyne.io/fyne/app"
-	"fyne.io/fyne/canvas"
 	"fyne.io/fyne/layout"
 	"fyne.io/fyne/widget"
 )
@@ -33,10 +33,7 @@ type FyFoto struct {
 
 	//Image Viewer
 	viewer   *fyne.Container
-	vContent *fyne.Container
-	vImage   *canvas.Image
-	vInfo    *widget.Label
-	vRect    *canvas.Rectangle
+	vWidget  *ui.Viewer
 	vToolbar *widget.Toolbar
 
 	//Main Layout
