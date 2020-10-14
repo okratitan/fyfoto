@@ -18,13 +18,18 @@ type FyFoto struct {
 	window fyne.Window
 
 	//Browser
-	browser   *fyne.Container
-	bInfo     *widget.Label
-	bToolbar  *widget.Toolbar
-	dirs      *fyne.Container
-	dScroller *widget.ScrollContainer
+	browser  *fyne.Container
+	bToolbar *widget.Toolbar
+	bInfo    *widget.Label
+
+	dirBox *fyne.Container
+	up     *widget.Button
+	dirs   *widget.List
+
 	images    *fyne.Container
 	iScroller *widget.ScrollContainer
+
+	directories []string
 
 	//Image Viewer
 	viewer   *fyne.Container
@@ -39,24 +44,6 @@ type FyFoto struct {
 
 	currentDir string
 	dirsHidden int
-}
-
-type gridImage struct {
-	widget.Box
-
-	imageFile   string
-	imageDir    string
-	imageObject *canvas.Image
-
-	ff *FyFoto
-}
-
-func (gi *gridImage) Tapped(*fyne.PointEvent) {
-	hideBrowser(gi.ff)
-	showViewer(gi.ff, gi.imageFile)
-}
-
-func (gi *gridImage) TappedSecondary(*fyne.PointEvent) {
 }
 
 func main() {
