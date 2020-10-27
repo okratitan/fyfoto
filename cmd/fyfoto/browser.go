@@ -2,10 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"math"
-	"path"
-	"path/filepath"
 	"strings"
 
 	"fyne.io/fyne"
@@ -20,8 +17,7 @@ import (
 type gridImage struct {
 	widget.Box
 
-	imageFile   string
-	imageDir    string
+	image fyne.URI
 	imageObject *canvas.Image
 
 	ff *FyFoto
@@ -29,70 +25,47 @@ type gridImage struct {
 
 func (gi *gridImage) Tapped(*fyne.PointEvent) {
 	hideBrowser(gi.ff)
-	showViewer(gi.ff, gi.imageFile)
+	showViewer(gi.ff, gi.image)
 }
 
 func (gi *gridImage) TappedSecondary(*fyne.PointEvent) {
 }
 
-func fileIsImage(file string) bool {
+func fileIsImage(file fyne.URI) bool {
 	mimes := &storage.MimeTypeFileFilter{MimeTypes: []string{"image/*"}}
-	return mimes.Matches(storage.NewURI("file://" + file))
+	return mimes.Matches(file)
 }
 
-func populate(ff *FyFoto, dir string) {
-	ff.directories = nil
+func populate(ff *FyFoto, dir fyne.URI) {
 	ff.images.Objects = nil
 	if widget.Renderer(ff.bInfo) != nil {
 		ff.bInfo.SetText("Loading Images")
 	}
-	ff.dirs.Refresh()
 	canvas.Refresh(ff.images)
 
 	i := 0
-	files, err := ioutil.ReadDir(dir)
+	luri, err := storage.ListerForURI(dir)
 	if err != nil {
-		fmt.Println("Could not determine directory contents")
-	}
-
-	thumbQueue := make(chan gridImage, len(files))
-	quitQueue := make(chan string, 4)
-	for workers := 0; workers < 4; workers++ {
-		go thumbnail(ff, thumbQueue, quitQueue)
-	}
-
-	ff.up.OnTapped = func() {
-		if ff.currentDir == "/" {
+		return
+	} else {
+		uris, err := luri.List()
+		if err != nil {
 			return
 		}
-		parentDir := filepath.Dir(dir)
-		thumbQueue = nil
-		ff.currentDir = parentDir
-		for workers := 0; workers < 4; workers++ {
-			quitQueue <- "stop"
-		}
-		go populate(ff, parentDir)
-	}
 
-	ff.dirs.OnItemSelected = func(index int) {
-		thumbQueue = nil
-		ff.currentDir = ff.directories[index]
+		thumbQueue := make(chan gridImage, len(uris))
+		quitQueue := make(chan string, 4)
 		for workers := 0; workers < 4; workers++ {
-			quitQueue <- "stop"
+			go thumbnail(ff, thumbQueue, quitQueue)
 		}
-		go populate(ff, ff.currentDir)
-	}
 
-	for _, f := range files {
-		if strings.HasPrefix(f.Name(), ".") == false {
-			if f.IsDir() {
-				newDir := dir + "/" + f.Name()
-				ff.directories = append(ff.directories, newDir)
-				ff.dirs.Refresh()
-			} else if fileIsImage(dir + "/" + f.Name()) {
-				gi := &gridImage{imageFile: dir + "/" + f.Name(), imageDir: dir, ff: ff}
-				thumbQueue <- *gi
-				i++
+		for _, u := range uris {
+			if strings.HasPrefix(u.Name(), ".") == false {
+				if fileIsImage(u) {
+					gi := &gridImage{image: u, ff: ff}
+					thumbQueue <- *gi
+					i++
+				}
 			}
 		}
 	}
@@ -105,14 +78,12 @@ func populate(ff *FyFoto, dir string) {
 
 func hideFolders(ff *FyFoto) {
 	ff.dirs.Hide()
-	ff.dirBox.Hide()
 	ff.dirsHidden = 1
 	canvas.Refresh(ff.browser)
 }
 
 func showFolders(ff *FyFoto) {
 	ff.dirs.Show()
-	ff.dirBox.Show()
 	ff.dirsHidden = 0
 	canvas.Refresh(ff.browser)
 }
@@ -121,23 +92,22 @@ func hideBrowser(ff *FyFoto) {
 	ff.images.Hide()
 	ff.iScroller.Hide()
 	ff.dirs.Hide()
-	ff.dirBox.Hide()
 	ff.bToolbar.Hide()
 	ff.bInfo.Hide()
 }
 
-func showBrowser(ff *FyFoto, dir string) {
+func showBrowser(ff *FyFoto, dir fyne.URI) {
 	ff.images.Show()
 	ff.iScroller.Show()
 	ff.dirs.Show()
-	ff.dirBox.Show()
 	ff.bToolbar.Show()
 	ff.bInfo.Show()
-	ff.window.SetTitle("FyFoto - " + dir)
+	ff.window.SetTitle("FyFoto - " + dir.String())
 	canvas.Refresh(ff.main)
 
 	if dir != ff.currentDir {
 		ff.currentDir = dir
+
 		go populate(ff, dir)
 	}
 }
@@ -158,17 +128,76 @@ func createBrowser(ff *FyFoto) {
 				dialog.ShowInformation("About", "FyFoto - A Cross-Platform Image Application", ff.window)
 			}))
 
-	ff.up = widget.NewButtonWithIcon("..", theme.MoveUpIcon(), nil)
-	ff.dirs = widget.NewList(func() int {
-		return len(ff.directories)
-	},
-		func() fyne.CanvasObject {
-			return fyne.NewContainerWithLayout(layout.NewHBoxLayout(), widget.NewIcon(theme.FolderIcon()), widget.NewLabel("Directory Name"))
+	ff.dirs = &widget.Tree {
+		Root: ff.rootDir.String(),
+		IsBranch: func(uid string) bool {
+			_, err := storage.ListerForURI(storage.NewURI(uid))
+			return err == nil
 		},
-		func(index int, item fyne.CanvasObject) {
-			item.(*fyne.Container).Objects[1].(*widget.Label).SetText(path.Base(ff.directories[index]))
-		})
-	ff.dirBox = fyne.NewContainerWithLayout(layout.NewBorderLayout(ff.up, nil, nil, nil), ff.up, ff.dirs)
+		CreateNode: func(branch bool) fyne.CanvasObject {
+			var icon fyne.CanvasObject
+			if branch {
+				icon = widget.NewIcon(nil)
+			} else {
+				icon = widget.NewFileIcon(nil)
+			}
+			return fyne.NewContainerWithLayout(layout.NewHBoxLayout(), icon, widget.NewLabel("Template Object"))
+		},
+	}
+	ff.dirs.ChildUIDs = func(uid string) (c []string) {
+		luri, err := storage.ListerForURI(storage.NewURI(uid))
+		if err != nil {
+			fyne.LogError("Unable to get lister for "+uid, err)
+		} else {
+			uris, err := luri.List()
+			if err != nil {
+				return
+			} else {
+				// Filter URIs
+				var us []fyne.URI
+				for _, u := range uris {
+					_, err := storage.ListerForURI(u)
+					if err == nil && !strings.HasPrefix(u.Name(), ".") {
+						us = append(us, u)
+					}
+				}
+				// Convert to Strings
+				for _, u := range us {
+					c = append(c, u.String())
+				}
+			}
+		}
+		return
+	}
+	ff.dirs.UpdateNode = func(uid string, branch bool, node fyne.CanvasObject) {
+		uri := storage.NewURI(uid)
+		c := node.(*fyne.Container)
+		if branch {
+			var r fyne.Resource
+			if ff.dirs.IsBranchOpen(uid) {
+				// Set open folder icon
+				r = theme.FolderOpenIcon()
+			} else {
+				// Set folder icon
+				r = theme.FolderIcon()
+			}
+			c.Objects[0].(*widget.Icon).SetResource(r)
+		} else {
+			// Set file uri to update icon
+			c.Objects[0].(*widget.FileIcon).SetURI(uri)
+		}
+		l := c.Objects[1].(*widget.Label)
+		if ff.dirs.Root == uid {
+			l.SetText(uid)
+		} else {
+			l.SetText(uri.Name())
+		}
+	}
+	ff.dirs.OnSelected = func(uid string) {
+		u := storage.NewURI(uid)
+		ff.currentDir = u
+		go populate(ff, u)
+	}
 
 	size := int(math.Floor(float64(128 * ff.window.Canvas().Scale())))
 	ff.images = fyne.NewContainerWithLayout(layout.NewFixedGridLayout(fyne.NewSize(size, size)))
@@ -176,6 +205,6 @@ func createBrowser(ff *FyFoto) {
 
 	ff.bInfo = widget.NewLabelWithStyle("No Images", fyne.TextAlignCenter, fyne.TextStyle{})
 
-	ff.browser = fyne.NewContainerWithLayout(layout.NewBorderLayout(ff.bToolbar, ff.bInfo, ff.dirBox, nil),
-		ff.bToolbar, ff.bInfo, ff.dirBox, ff.iScroller)
+	ff.browser = fyne.NewContainerWithLayout(layout.NewBorderLayout(ff.bToolbar, ff.bInfo, ff.dirs, nil),
+		ff.bToolbar, ff.bInfo, ff.dirs, ff.iScroller)
 }

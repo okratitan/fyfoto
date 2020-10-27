@@ -9,6 +9,8 @@ import (
 	"math"
 	"os"
 	"os/user"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"fyne.io/fyne"
@@ -23,7 +25,7 @@ func thumbnail(ff *FyFoto, thumbQueue <-chan gridImage, quitQueue <-chan string)
 		case <-quitQueue:
 			return
 		case gi := <-thumbQueue:
-			file := gi.imageFile
+			file := strings.TrimPrefix(gi.image.String(), "file://")
 			base := ""
 			xdgcache := os.Getenv("XDG_CACHE_HOME")
 			if xdgcache == "" {
@@ -42,7 +44,7 @@ func thumbnail(ff *FyFoto, thumbQueue <-chan gridImage, quitQueue <-chan string)
 			thumbDir += "/normal"
 			os.Mkdir(thumbDir, 0700)
 
-			uri := []byte("file://" + file)
+			uri := []byte(gi.image.String())
 			newfileMD5 := md5.New()
 			newfileMD5.Write(uri)
 			newfile := hex.EncodeToString(newfileMD5.Sum(nil))
@@ -106,7 +108,7 @@ func thumbnail(ff *FyFoto, thumbQueue <-chan gridImage, quitQueue <-chan string)
 					fmt.Println("Could not encode png for thumbnail")
 				}
 			}
-			if &gi != nil && gi.imageDir == ff.currentDir {
+			if &gi != nil && "file://" + filepath.Dir(file) == ff.currentDir.String() {
 				gi.imageObject = canvas.NewImageFromFile(destfile)
 				gi.imageObject.FillMode = canvas.ImageFillContain
 				size := int(math.Floor(float64(128 * ff.window.Canvas().Scale())))

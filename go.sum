@@ -4,6 +4,8 @@ fyne.io/fyne v1.3.4-0.20201013172021-60799f9e83fc h1:J8EsTqI0DyWE6H5jYR7JVtIlwHB
 fyne.io/fyne v1.3.4-0.20201013172021-60799f9e83fc/go.mod h1:YHAxYk3YUUP6+erPjlYwfwvPxIaFEANAtlj00Qoh0R8=
 fyne.io/fyne v1.3.4-0.20201013183605-a3333e5a2f43 h1:0DZ9yDjmqhrapxu8P4sjxgCW9k6AycFnSAZkr+wnbxQ=
 fyne.io/fyne v1.3.4-0.20201013183605-a3333e5a2f43/go.mod h1:YHAxYk3YUUP6+erPjlYwfwvPxIaFEANAtlj00Qoh0R8=
+fyne.io/fyne v1.4.0-rc1 h1:s/WaHDiNJDBWVopfP69bEShUj1SJscg4GOaK1s3tKiU=
+fyne.io/fyne v1.4.0-rc1/go.mod h1:j6pz0cVZSgVo3VnVS4MSTOW7yjK1KW8erwBnUoWKgqI=
 github.com/Kodeworks/golang-image-ico v0.0.0-20141118225523-73f0f4cfade9/go.mod h1:7uhhqiBaR4CpN0k9rMjOtjpcfGd6DG2m04zQxKnWQ0I=
 github.com/akavel/rsrc v0.8.0/go.mod h1:uLoCtb9J+EyAqh+26kdrTgmzRBFPGOolLWKpdxkKq+c=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -13,6 +15,7 @@ github.com/fsnotify/fsnotify v1.4.9 h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWo
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
 github.com/fyne-io/mobile v0.0.2 h1:eGmCR5lkFxk0PnPafGppLFRD5QODJfSVdrjhLjanOVg=
 github.com/fyne-io/mobile v0.0.2/go.mod h1:/kOrWrZB6sasLbEy2JIvr4arEzQTXBTZGb3Y96yWbHY=
+github.com/fyne-io/mobile v0.1.1/go.mod h1:/kOrWrZB6sasLbEy2JIvr4arEzQTXBTZGb3Y96yWbHY=
 github.com/go-gl/gl v0.0.0-20181026044259-55b76b7df9d2 h1:78Hza2KHn2PX1jdydQnffaU2A/xM0g3Nx1xmMdep9Gk=
 github.com/go-gl/gl v0.0.0-20181026044259-55b76b7df9d2/go.mod h1:482civXOzJJCPzJ4ZOX/pwvXBWSnzD4OKMdH4ClKGbk=
 github.com/go-gl/gl v0.0.0-20190320180904-bf2b1f2f34d7 h1:SCYMcCJ89LjRGwEa0tRluNRiMjZHalQZrVrvTbPh+qw=

@@ -17,12 +17,12 @@ func hideViewer(ff *FyFoto) {
 	ff.vToolbar.Hide()
 }
 
-func showViewer(ff *FyFoto, imagePath string) {
-	ff.vWidget.SetPath(imagePath)
+func showViewer(ff *FyFoto, image fyne.URI) {
+	ff.vWidget.SetURI(image)
 	ff.vWidget.Show()
 	ff.viewer.Show()
 	ff.vToolbar.Show()
-	ff.window.SetTitle("Fyfoto - " + imagePath)
+	ff.window.SetTitle("Fyfoto - " + image.String())
 	canvas.Refresh(ff.main)
 }
 

@@ -2,11 +2,11 @@ package ui
 
 import (
 	"image/color"
+	"strings"
 
 	"fyne.io/fyne"
 	"fyne.io/fyne/canvas"
 	"fyne.io/fyne/layout"
-	"fyne.io/fyne/storage"
 	"fyne.io/fyne/widget"
 )
 
@@ -41,10 +41,6 @@ func (v *Viewer) CreateRenderer() fyne.WidgetRenderer {
 		Image: image,
 		Info:  info,
 	}
-}
-
-func (v *Viewer) SetPath(path string) {
-	v.SetURI(storage.NewURI(path))
 }
 
 func (v *Viewer) SetURI(uri fyne.URI) {
@@ -84,7 +80,7 @@ func (r *viewerRenderer) Refresh() {
 	uri := r.Viewer.URI
 	if uri != nil {
 		r.Info.SetText(uri.Name())
-		r.Image.File = uri.String()
+		r.Image.File = strings.TrimPrefix(uri.String(), "file://")
 	}
 	r.Image.FillMode = canvas.ImageFillContain
 	r.Image.Refresh()

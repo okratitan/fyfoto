@@ -3,6 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+
+	"fyne.io/fyne/storage"
+
 	"github.com/okratitan/fyfoto/ui"
 	"os/user"
 
@@ -22,9 +25,7 @@ type FyFoto struct {
 	bToolbar *widget.Toolbar
 	bInfo    *widget.Label
 
-	dirBox *fyne.Container
-	up     *widget.Button
-	dirs   *widget.List
+	dirs *widget.Tree
 
 	images    *fyne.Container
 	iScroller *widget.ScrollContainer
@@ -39,7 +40,8 @@ type FyFoto struct {
 	//Main Layout
 	main *fyne.Container
 
-	currentDir string
+	rootDir    fyne.URI
+	currentDir fyne.URI
 	dirsHidden int
 }
 
@@ -53,11 +55,12 @@ func main() {
 	flag.Parse()
 
 	ff := &FyFoto{app: app.New()}
+	ff.rootDir = storage.NewURI("file://" + *dirPtr)
 	ff.window = ff.app.NewWindow("FyFoto")
 
 	createBrowser(ff)
 	createViewer(ff)
-	showBrowser(ff, *dirPtr)
+	showBrowser(ff, ff.rootDir)
 	hideViewer(ff)
 
 	ff.main = fyne.NewContainerWithLayout(layout.NewBorderLayout(nil, nil, nil, nil), ff.browser, ff.viewer)
