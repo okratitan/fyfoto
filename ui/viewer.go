@@ -1,13 +1,12 @@
 package ui
 
 import (
-	"image/color"
-	"strings"
-
 	"fyne.io/fyne"
 	"fyne.io/fyne/canvas"
 	"fyne.io/fyne/layout"
 	"fyne.io/fyne/widget"
+	"image/color"
+	"strings"
 )
 
 var _ fyne.Widget = (*Viewer)(nil)

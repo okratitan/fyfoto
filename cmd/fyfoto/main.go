@@ -3,16 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
-
-	"fyne.io/fyne/storage"
-
-	"github.com/okratitan/fyfoto/ui"
-	"os/user"
-
 	"fyne.io/fyne"
 	"fyne.io/fyne/app"
-	"fyne.io/fyne/layout"
+	"fyne.io/fyne/container"
+	"fyne.io/fyne/storage"
 	"fyne.io/fyne/widget"
+	"github.com/AletheiaWareLLC/spaceclientgo"
+	"github.com/okratitan/fyfoto/ui"
+	"os/user"
 )
 
 //FyFoto Globals
@@ -22,15 +20,16 @@ type FyFoto struct {
 
 	//Browser
 	browser  *fyne.Container
-	bToolbar *widget.Toolbar
+	bSources *container.AppTabs
 	bInfo    *widget.Label
 
-	dirs *widget.Tree
+	localToolbar *widget.Toolbar
+	localDirs    *widget.Tree
+	localImages  *ui.LocalThumbnailTable
 
-	images    *fyne.Container
-	iScroller *widget.ScrollContainer
-
-	directories []string
+	space        *spaceclientgo.SpaceClient
+	spaceToolbar *widget.Toolbar
+	spaceImages  *ui.SpaceThumbnailTable
 
 	//Image Viewer
 	viewer   *fyne.Container
@@ -54,7 +53,10 @@ func main() {
 	dirPtr := flag.String("path", usr.HomeDir, "Path to a directory")
 	flag.Parse()
 
-	ff := &FyFoto{app: app.New()}
+	ff := &FyFoto{
+		app:   app.New(),
+		space: spaceclientgo.NewSpaceClient(),
+	}
 	ff.rootDir = storage.NewURI("file://" + *dirPtr)
 	ff.window = ff.app.NewWindow("FyFoto")
 
@@ -63,10 +65,10 @@ func main() {
 	showBrowser(ff, ff.rootDir)
 	hideViewer(ff)
 
-	ff.main = fyne.NewContainerWithLayout(layout.NewBorderLayout(nil, nil, nil, nil), ff.browser, ff.viewer)
+	ff.main = container.NewMax(ff.browser, ff.viewer)
 
 	ff.window.SetContent(ff.main)
 	ff.window.Resize(fyne.NewSize(1024, 576))
-
+	ff.window.CenterOnScreen()
 	ff.window.ShowAndRun()
 }
