@@ -1,3 +1,5 @@
+![FyFoto Logo](./ui/data/icon.svg)
+
 # FyFoto
 
 A Cross-Platform Image Viewer

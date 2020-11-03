@@ -2,15 +2,15 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"fyne.io/fyne"
 	"fyne.io/fyne/app"
 	"fyne.io/fyne/container"
 	"fyne.io/fyne/storage"
 	"fyne.io/fyne/widget"
 	"github.com/AletheiaWareLLC/spaceclientgo"
+	"github.com/okratitan/fyfoto/internal/filesystem"
 	"github.com/okratitan/fyfoto/ui"
-	"os/user"
+	"log"
 )
 
 //FyFoto Globals
@@ -45,29 +45,31 @@ type FyFoto struct {
 }
 
 func main() {
-	usr, err := user.Current()
+	rootDir, err := filesystem.RootDirectory()
 	if err != nil {
-		fmt.Println("Could not find the current user")
+		log.Fatal(err)
 	}
 
-	dirPtr := flag.String("path", usr.HomeDir, "Path to a directory")
+	dirPtr := flag.String("path", rootDir, "Path to a directory")
 	flag.Parse()
 
 	ff := &FyFoto{
 		app:   app.New(),
 		space: spaceclientgo.NewSpaceClient(),
 	}
-	ff.rootDir = storage.NewURI("file://" + *dirPtr)
+	ff.rootDir = storage.NewFileURI(*dirPtr)
 	ff.window = ff.app.NewWindow("FyFoto")
 
 	createBrowser(ff)
 	createViewer(ff)
-	showBrowser(ff, ff.rootDir)
-	hideViewer(ff)
 
 	ff.main = container.NewMax(ff.browser, ff.viewer)
 
+	showBrowser(ff, ff.rootDir)
+	hideViewer(ff)
+
 	ff.window.SetContent(ff.main)
+
 	ff.window.Resize(fyne.NewSize(1024, 576))
 	ff.window.CenterOnScreen()
 	ff.window.ShowAndRun()

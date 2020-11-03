@@ -1,16 +1,14 @@
-// +build linux openbsd freebsd netbsd
+// +build android
 
-package cache
+package filesystem
 
 import (
-	"fmt"
 	"os"
-	"os/user"
 	"path/filepath"
 )
 
 func ImageCache() (string, error) {
-	cacheDir, err := cache()
+	cacheDir, err := cacheDirectory()
 	if err != nil {
 		return "", err
 	}
@@ -22,21 +20,29 @@ func ImageCache() (string, error) {
 }
 
 func ThumbnailCache() (string, error) {
-	cacheDir, err := cache()
+	cacheDir, err := cacheDirectory()
 	if err != nil {
 		return "", err
 	}
-	thumbDir := filepath.Join(base, "thumbnails", "normal")
+	thumbDir := filepath.Join(cacheDir, "thumbnails", "normal")
 	if err := os.MkdirAll(thumbDir, 0700); err != nil {
 		return "", err
 	}
 	return thumbDir, nil
 }
 
-func cache() (string, error) {
-	xdgCache := os.Getenv("XDG_CACHE_HOME")
-	if xdgCache == "" {
+func RootDirectory() (string, error) {
+	filesDir := os.Getenv("FILESDIR")
+	if filesDir == "" {
+		return userHome()
+	}
+	return filesDir, nil
+}
+
+func cacheDirectory() (string, error) {
+	tempDir := os.Getenv("TMPDIR")
+	if tempDir == "" {
 		return userCache()
 	}
-	return xdgCache
+	return tempDir, nil
 }

@@ -1,16 +1,14 @@
-// +build ios
+// +build linux,openbsd,freebsd,netbsd
 
-package cache
+package filesystem
 
 import (
-	"fmt"
 	"os"
-	"os/user"
 	"path/filepath"
 )
 
 func ImageCache() (string, error) {
-	cacheDir, err := cache()
+	cacheDir, err := cacheDirectory()
 	if err != nil {
 		return "", err
 	}
@@ -22,7 +20,7 @@ func ImageCache() (string, error) {
 }
 
 func ThumbnailCache() (string, error) {
-	cacheDir, err := cache()
+	cacheDir, err := cacheDirectory()
 	if err != nil {
 		return "", err
 	}
@@ -33,10 +31,14 @@ func ThumbnailCache() (string, error) {
 	return thumbDir, nil
 }
 
-func cache() (string, error) {
-	cacheDir, err := os.UserCacheDir()
-	if err != nil {
+func RootDirectory() (string, error) {
+	return userHome()
+}
+
+func cacheDirectory() (string, error) {
+	xdgCache := os.Getenv("XDG_CACHE_HOME")
+	if xdgCache == "" {
 		return userCache()
 	}
-	return cacheDir
+	return xdgCache, nil
 }

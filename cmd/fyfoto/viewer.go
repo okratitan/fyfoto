@@ -3,7 +3,7 @@ package main
 import (
 	"fyne.io/fyne"
 	"fyne.io/fyne/canvas"
-	"fyne.io/fyne/layout"
+	"fyne.io/fyne/container"
 	"fyne.io/fyne/theme"
 	"fyne.io/fyne/widget"
 	"github.com/okratitan/fyfoto/ui"
@@ -33,5 +33,5 @@ func createViewer(ff *FyFoto) {
 		}),
 	)
 
-	ff.viewer = fyne.NewContainerWithLayout(layout.NewBorderLayout(ff.vToolbar, nil, nil, nil), ff.vToolbar, ff.vWidget)
+	ff.viewer = container.NewBorder(ff.vToolbar, nil, nil, nil, ff.vToolbar, ff.vWidget)
 }

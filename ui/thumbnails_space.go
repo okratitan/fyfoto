@@ -10,7 +10,7 @@ import (
 	"github.com/AletheiaWareLLC/bcgo"
 	"github.com/AletheiaWareLLC/spaceclientgo"
 	"github.com/AletheiaWareLLC/spacego"
-	"github.com/okratitan/fyfoto/internal/cache"
+	"github.com/okratitan/fyfoto/internal/filesystem"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -96,7 +96,7 @@ func (t *SpaceThumbnailTable) Update(node *bcgo.Node) error {
 }
 
 func (t *SpaceThumbnailTable) createThumbnail(id string, meta *spacego.Meta) {
-	thumbnailCache, err := cache.ThumbnailCache()
+	thumbnailCache, err := filesystem.ThumbnailCache()
 	if err != nil {
 		return
 	}

@@ -1,16 +1,14 @@
-// +build android
+// +build darwin
 
-package cache
+package filesystem
 
 import (
-	"fmt"
 	"os"
-	"os/user"
 	"path/filepath"
 )
 
 func ImageCache() (string, error) {
-	cacheDir, err := cache()
+	cacheDir, err := userCache()
 	if err != nil {
 		return "", err
 	}
@@ -22,7 +20,7 @@ func ImageCache() (string, error) {
 }
 
 func ThumbnailCache() (string, error) {
-	cacheDir, err := cache()
+	cacheDir, err := userCache()
 	if err != nil {
 		return "", err
 	}
@@ -33,10 +31,6 @@ func ThumbnailCache() (string, error) {
 	return thumbDir, nil
 }
 
-func cache() (string, error) {
-	tempDir := os.Getenv("TMPDIR")
-	if tempDir == "" {
-		return userCache()
-	}
-	return tempDir, nil
+func RootDirectory() (string, error) {
+	return userHome()
 }

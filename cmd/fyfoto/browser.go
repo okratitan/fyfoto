@@ -16,7 +16,7 @@ import (
 	"github.com/AletheiaWareLLC/spacefynego"
 	spaceuidata "github.com/AletheiaWareLLC/spacefynego/ui/data"
 	"github.com/AletheiaWareLLC/spacego"
-	"github.com/okratitan/fyfoto/internal/cache"
+	"github.com/okratitan/fyfoto/internal/filesystem"
 	"github.com/okratitan/fyfoto/ui"
 	"os"
 	"path/filepath"
@@ -202,7 +202,7 @@ func createBrowser(ff *FyFoto) {
 			return
 		}
 
-		c, err := cache.ImageCache()
+		c, err := filesystem.ImageCache()
 		if err != nil {
 			f.ShowError(err)
 			return

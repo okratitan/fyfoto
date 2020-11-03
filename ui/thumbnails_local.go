@@ -8,7 +8,7 @@ import (
 	"fyne.io/fyne/canvas"
 	"fyne.io/fyne/storage"
 	"fyne.io/fyne/widget"
-	"github.com/okratitan/fyfoto/internal/cache"
+	"github.com/okratitan/fyfoto/internal/filesystem"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -106,7 +106,7 @@ func (t *LocalThumbnailTable) Update(root fyne.URI) error {
 }
 
 func (t *LocalThumbnailTable) createThumbnail(id string, uri fyne.URI) {
-	thumbnailCache, err := cache.ThumbnailCache()
+	thumbnailCache, err := filesystem.ThumbnailCache()
 	if err != nil {
 		return
 	}

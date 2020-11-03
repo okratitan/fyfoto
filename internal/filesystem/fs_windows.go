@@ -1,6 +1,6 @@
 // +build windows
 
-package cache
+package filesystem
 
 import (
 	"fmt"
@@ -31,4 +31,8 @@ func ThumbnailCache() (string, error) {
 		return "", err
 	}
 	return thumbDir, nil
+}
+
+func RootDirectory() (string, error) {
+	return userHome()
 }
