@@ -130,7 +130,7 @@ func createBrowser(ff *FyFoto) {
 	}
 	ff.localImages = ui.NewLocalThumbnailTable(func(id string, uri fyne.URI) {
 		hideBrowser(ff)
-		showViewer(ff, uri)
+		showViewer(ff, uri.Name(), uri)
 	})
 
 	ff.spaceToolbar = widget.NewToolbar(
@@ -229,7 +229,7 @@ func createBrowser(ff *FyFoto) {
 			fmt.Println("Wrote", bcgo.BinarySizeToString(count), "to", file)
 		}
 		hideBrowser(ff)
-		showViewer(ff, storage.NewFileURI(file))
+		showViewer(ff, meta.Name, storage.NewFileURI(file))
 	})
 
 	ff.bSources = container.NewAppTabs(

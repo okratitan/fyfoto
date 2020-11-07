@@ -13,10 +13,10 @@ func hideViewer(ff *FyFoto) {
 	ff.viewer.Hide()
 }
 
-func showViewer(ff *FyFoto, image fyne.URI) {
-	ff.vWidget.SetURI(image)
+func showViewer(ff *FyFoto, name string, source fyne.URI) {
+	ff.vWidget.SetSource(name, source)
 	ff.viewer.Show()
-	ff.window.SetTitle("Fyfoto - " + image.String())
+	ff.window.SetTitle("Fyfoto - " + name)
 	canvas.Refresh(ff.main)
 }
 
