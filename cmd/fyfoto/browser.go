@@ -105,7 +105,7 @@ func showBrowser(ff *FyFoto, dir fyne.URI) {
 }
 
 func showAbout(ff *FyFoto) {
-	dialog.ShowInformation("About", "FyFoto - A Cross-Platform Image Application", ff.window)
+	dialog.ShowInformation("About", "FyFoto - A Cross-Platform Image Application\n\nS P A C E - A Secure, Private, Storage Platform ", ff.window)
 }
 
 func createBrowser(ff *FyFoto) {
