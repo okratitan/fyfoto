@@ -114,7 +114,7 @@ func (t *SpaceThumbnailTable) createThumbnail(id string, meta *spacego.Meta) {
 			return
 		}
 		var buffer bytes.Buffer
-		count, err := t.client.Read(t.node, hash, &buffer)
+		count, err := t.client.ReadFile(t.node, hash, &buffer)
 		if err != nil {
 			fmt.Println(err)
 			return

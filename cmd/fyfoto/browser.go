@@ -221,12 +221,12 @@ func createBrowser(ff *FyFoto) {
 				return
 			}
 			// TODO display and update progress bar
-			count, err := ff.space.Read(node, hash, out)
+			count, err := ff.space.ReadFile(node, hash, out)
 			if err != nil {
 				f.ShowError(err)
 				return
 			}
-			fmt.Println("Wrote", bcgo.BinarySizeToString(count), "to", file)
+			fmt.Println("Wrote", bcgo.BinarySizeToString(uint64(count)), "to", file)
 		}
 		hideBrowser(ff)
 		showViewer(ff, meta.Name, storage.NewFileURI(file))
