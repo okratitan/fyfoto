@@ -1,13 +1,13 @@
 package main
 
 import (
+	"aletheiaware.com/spaceclientgo"
 	"flag"
 	"fyne.io/fyne"
 	"fyne.io/fyne/app"
 	"fyne.io/fyne/container"
 	"fyne.io/fyne/storage"
 	"fyne.io/fyne/widget"
-	"github.com/AletheiaWareLLC/spaceclientgo"
 	"github.com/okratitan/fyfoto/internal/filesystem"
 	"github.com/okratitan/fyfoto/ui"
 	"log"

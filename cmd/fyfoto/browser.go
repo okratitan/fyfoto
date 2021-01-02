@@ -1,6 +1,12 @@
 package main
 
 import (
+	bcui "aletheiaware.com/bcfynego/ui"
+	bcuidata "aletheiaware.com/bcfynego/ui/data"
+	"aletheiaware.com/bcgo"
+	"aletheiaware.com/spacefynego"
+	spaceuidata "aletheiaware.com/spacefynego/ui/data"
+	"aletheiaware.com/spacego"
 	"encoding/base64"
 	"fmt"
 	"fyne.io/fyne"
@@ -10,12 +16,6 @@ import (
 	"fyne.io/fyne/storage"
 	"fyne.io/fyne/theme"
 	"fyne.io/fyne/widget"
-	bcui "github.com/AletheiaWareLLC/bcfynego/ui"
-	bcuidata "github.com/AletheiaWareLLC/bcfynego/ui/data"
-	"github.com/AletheiaWareLLC/bcgo"
-	"github.com/AletheiaWareLLC/spacefynego"
-	spaceuidata "github.com/AletheiaWareLLC/spacefynego/ui/data"
-	"github.com/AletheiaWareLLC/spacego"
 	"github.com/okratitan/fyfoto/internal/filesystem"
 	"github.com/okratitan/fyfoto/ui"
 	"os"

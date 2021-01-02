@@ -1,15 +1,15 @@
 package ui
 
 import (
+	"aletheiaware.com/bcgo"
+	"aletheiaware.com/spaceclientgo"
+	"aletheiaware.com/spacego"
 	"bytes"
 	"encoding/base64"
 	"fmt"
 	"fyne.io/fyne"
 	"fyne.io/fyne/canvas"
 	"fyne.io/fyne/widget"
-	"github.com/AletheiaWareLLC/bcgo"
-	"github.com/AletheiaWareLLC/spaceclientgo"
-	"github.com/AletheiaWareLLC/spacego"
 	"github.com/okratitan/fyfoto/internal/filesystem"
 	"image"
 	_ "image/gif"
