@@ -2,11 +2,11 @@ package ui
 
 import (
 	"fmt"
-	"fyne.io/fyne"
-	"fyne.io/fyne/canvas"
-	"fyne.io/fyne/container"
-	"fyne.io/fyne/theme"
-	"fyne.io/fyne/widget"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/theme"
+	"fyne.io/fyne/v2/widget"
 	"golang.org/x/image/draw"
 	"image"
 	_ "image/gif"
@@ -17,7 +17,7 @@ import (
 	"sync"
 )
 
-const ThumbnailSize = 128
+const ThumbnailSize = float32(128)
 
 type thumbnailTable struct {
 	widget.Table
@@ -51,7 +51,10 @@ func (t *thumbnailTable) countToRowCol() (int, int) {
 	rows := 0
 	cols := 0
 	if count := t.Count(); count > 0 {
-		cols = fyne.Min(t.Size().Width/ThumbnailSize, count)
+		cols = int(t.Size().Width / ThumbnailSize)
+		if count < cols {
+			cols = count
+		}
 		rows = count / cols
 		if count%cols > 0 {
 			rows++
@@ -62,19 +65,19 @@ func (t *thumbnailTable) countToRowCol() (int, int) {
 
 func (t *thumbnailTable) idToIndex(id widget.TableCellID) int {
 	cols := t.Size().Width / ThumbnailSize
-	index := id.Row*cols + id.Col
+	index := id.Row*int(cols) + id.Col
 	return index
 }
 
 func writeThumbnail(img image.Image, output string) {
 	bounds := img.Bounds()
-	newWidth, newHeight := ThumbnailSize, ThumbnailSize
+	newWidth, newHeight := int(ThumbnailSize), int(ThumbnailSize)
 	if bounds.Dx() > bounds.Dy() {
-		scale := float64(bounds.Dx()) / float64(bounds.Dy())
-		newHeight = int(math.Round(float64(ThumbnailSize) / float64(scale)))
+		scale := float32(bounds.Dx()) / float32(bounds.Dy())
+		newHeight = int(math.Round(float64(ThumbnailSize / scale)))
 	} else if bounds.Dy() > bounds.Dx() {
-		scale := float64(bounds.Dy()) / float64(bounds.Dx())
-		newWidth = int(math.Round(float64(ThumbnailSize) / float64(scale)))
+		scale := float32(bounds.Dy()) / float32(bounds.Dx())
+		newWidth = int(math.Round(float64(ThumbnailSize / scale)))
 	}
 	dest := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
 	draw.NearestNeighbor.Scale(dest, dest.Bounds(), img, bounds, draw.Src, nil)

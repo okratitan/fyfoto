@@ -4,18 +4,16 @@ import (
 	"aletheiaware.com/bcgo"
 	"aletheiaware.com/spaceclientgo"
 	"aletheiaware.com/spacego"
-	"bytes"
 	"encoding/base64"
 	"fmt"
-	"fyne.io/fyne"
-	"fyne.io/fyne/canvas"
-	"fyne.io/fyne/widget"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/widget"
 	"github.com/okratitan/fyfoto/internal/filesystem"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
-	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -86,6 +84,11 @@ func (t *SpaceThumbnailTable) AddMeta(entry *bcgo.BlockEntry, meta *spacego.Meta
 	return nil
 }
 
+func (t *SpaceThumbnailTable) Clear() {
+	t.ids = nil
+	t.Refresh()
+}
+
 func (t *SpaceThumbnailTable) Update(node *bcgo.Node) error {
 	t.node = node
 	if err := t.client.List(node, t.AddMeta); err != nil {
@@ -113,14 +116,12 @@ func (t *SpaceThumbnailTable) createThumbnail(id string, meta *spacego.Meta) {
 			fmt.Println(err)
 			return
 		}
-		var buffer bytes.Buffer
-		count, err := t.client.ReadFile(t.node, hash, &buffer)
+		reader, err := t.client.ReadFile(t.node, hash)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		log.Println("Count:", count)
-		src, _, err := image.Decode(&buffer)
+		src, _, err := image.Decode(reader)
 		if err != nil {
 			fmt.Println("Could not decode source image for thumbnail")
 			return

@@ -1,13 +1,15 @@
 package main
 
 import (
+	"aletheiaware.com/bcgo"
 	"aletheiaware.com/spaceclientgo"
+	"aletheiaware.com/spacefynego"
 	"flag"
-	"fyne.io/fyne"
-	"fyne.io/fyne/app"
-	"fyne.io/fyne/container"
-	"fyne.io/fyne/storage"
-	"fyne.io/fyne/widget"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/storage"
+	"fyne.io/fyne/v2/widget"
 	"github.com/okratitan/fyfoto/internal/filesystem"
 	"github.com/okratitan/fyfoto/ui"
 	"log"
@@ -27,7 +29,8 @@ type FyFoto struct {
 	localDirs    *widget.Tree
 	localImages  *ui.LocalThumbnailTable
 
-	space        *spaceclientgo.SpaceClient
+	spaceClient  *spaceclientgo.SpaceClient
+	spaceFyne    *spacefynego.SpaceFyne
 	spaceToolbar *widget.Toolbar
 	spaceImages  *ui.SpaceThumbnailTable
 
@@ -54,11 +57,26 @@ func main() {
 	flag.Parse()
 
 	ff := &FyFoto{
-		app:   app.New(),
-		space: spaceclientgo.NewSpaceClient(),
+		app:         app.New(),
+		spaceClient: spaceclientgo.NewSpaceClient(),
 	}
 	ff.rootDir = storage.NewFileURI(*dirPtr)
 	ff.window = ff.app.NewWindow("FyFoto")
+	ff.spaceFyne = spacefynego.NewSpaceFyne(ff.app, ff.window, ff.spaceClient)
+	ff.spaceFyne.OnKeysImported = func(alias string) {
+		go populateSpace(ff)
+	}
+	onSignedIn := ff.spaceFyne.OnSignedIn
+	ff.spaceFyne.OnSignedIn = func(node *bcgo.Node) {
+		if onSignedIn != nil {
+			onSignedIn(node)
+		}
+		go populateSpaceWithNode(ff, node)
+	}
+	ff.spaceFyne.OnSignedOut = func() {
+		ff.spaceImages.Clear()
+		ff.bInfo.SetText("")
+	}
 
 	createBrowser(ff)
 	createViewer(ff)
