@@ -1,18 +1,18 @@
 package main
 
 import (
+	"aletheiaware.com/bcgo"
+	"aletheiaware.com/spaceclientgo"
+	"aletheiaware.com/spacefynego"
 	"flag"
-	"fmt"
-
-	"fyne.io/fyne/storage"
-
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/storage"
+	"fyne.io/fyne/v2/widget"
+	"github.com/okratitan/fyfoto/internal/filesystem"
 	"github.com/okratitan/fyfoto/ui"
-	"os/user"
-
-	"fyne.io/fyne"
-	"fyne.io/fyne/app"
-	"fyne.io/fyne/layout"
-	"fyne.io/fyne/widget"
+	"log"
 )
 
 //FyFoto Globals
@@ -22,15 +22,17 @@ type FyFoto struct {
 
 	//Browser
 	browser  *fyne.Container
-	bToolbar *widget.Toolbar
+	bSources *container.AppTabs
 	bInfo    *widget.Label
 
-	dirs *widget.Tree
+	localToolbar *widget.Toolbar
+	localDirs    *widget.Tree
+	localImages  *ui.LocalThumbnailTable
 
-	images    *fyne.Container
-	iScroller *widget.ScrollContainer
-
-	directories []string
+	spaceClient  *spaceclientgo.SpaceClient
+	spaceFyne    *spacefynego.SpaceFyne
+	spaceToolbar *widget.Toolbar
+	spaceImages  *ui.SpaceThumbnailTable
 
 	//Image Viewer
 	viewer   *fyne.Container
@@ -46,27 +48,47 @@ type FyFoto struct {
 }
 
 func main() {
-	usr, err := user.Current()
+	rootDir, err := filesystem.RootDirectory()
 	if err != nil {
-		fmt.Println("Could not find the current user")
+		log.Fatal(err)
 	}
 
-	dirPtr := flag.String("path", usr.HomeDir, "Path to a directory")
+	dirPtr := flag.String("path", rootDir, "Path to a directory")
 	flag.Parse()
 
-	ff := &FyFoto{app: app.New()}
-	ff.rootDir = storage.NewURI("file://" + *dirPtr)
+	ff := &FyFoto{
+		app:         app.New(),
+		spaceClient: spaceclientgo.NewSpaceClient(),
+	}
+	ff.rootDir = storage.NewFileURI(*dirPtr)
 	ff.window = ff.app.NewWindow("FyFoto")
+	ff.spaceFyne = spacefynego.NewSpaceFyne(ff.app, ff.window, ff.spaceClient)
+	ff.spaceFyne.OnKeysImported = func(alias string) {
+		go populateSpace(ff)
+	}
+	onSignedIn := ff.spaceFyne.OnSignedIn
+	ff.spaceFyne.OnSignedIn = func(node *bcgo.Node) {
+		if onSignedIn != nil {
+			onSignedIn(node)
+		}
+		go populateSpaceWithNode(ff, node)
+	}
+	ff.spaceFyne.OnSignedOut = func() {
+		ff.spaceImages.Clear()
+		ff.bInfo.SetText("")
+	}
 
 	createBrowser(ff)
 	createViewer(ff)
+
+	ff.main = container.NewMax(ff.browser, ff.viewer)
+
 	showBrowser(ff, ff.rootDir)
 	hideViewer(ff)
 
-	ff.main = fyne.NewContainerWithLayout(layout.NewBorderLayout(nil, nil, nil, nil), ff.browser, ff.viewer)
-
 	ff.window.SetContent(ff.main)
-	ff.window.Resize(fyne.NewSize(1024, 576))
 
+	ff.window.Resize(fyne.NewSize(1024, 576))
+	ff.window.CenterOnScreen()
 	ff.window.ShowAndRun()
 }

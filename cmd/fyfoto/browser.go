@@ -1,210 +1,258 @@
 package main
 
 import (
+	bcui "aletheiaware.com/bcfynego/ui"
+	bcuidata "aletheiaware.com/bcfynego/ui/data"
+	"aletheiaware.com/bcgo"
+	spaceuidata "aletheiaware.com/spacefynego/ui/data"
+	"aletheiaware.com/spacego"
+	"encoding/base64"
 	"fmt"
-	"math"
-	"strings"
-
-	"fyne.io/fyne"
-	"fyne.io/fyne/canvas"
-	"fyne.io/fyne/dialog"
-	"fyne.io/fyne/layout"
-	"fyne.io/fyne/storage"
-	"fyne.io/fyne/theme"
-	"fyne.io/fyne/widget"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/storage"
+	"fyne.io/fyne/v2/theme"
+	"fyne.io/fyne/v2/widget"
+	"github.com/okratitan/fyfoto/internal/filesystem"
+	"github.com/okratitan/fyfoto/ui"
+	"io"
+	"os"
+	"path/filepath"
 )
-
-type gridImage struct {
-	widget.Box
-
-	image fyne.URI
-	imageObject *canvas.Image
-
-	ff *FyFoto
-}
-
-func (gi *gridImage) Tapped(*fyne.PointEvent) {
-	hideBrowser(gi.ff)
-	showViewer(gi.ff, gi.image)
-}
-
-func (gi *gridImage) TappedSecondary(*fyne.PointEvent) {
-}
 
 func fileIsImage(file fyne.URI) bool {
 	mimes := &storage.MimeTypeFileFilter{MimeTypes: []string{"image/*"}}
 	return mimes.Matches(file)
 }
 
-func populate(ff *FyFoto, dir fyne.URI) {
-	ff.images.Objects = nil
+func populateLocal(ff *FyFoto, dir fyne.URI) {
+	// TODO Should this show a Progress Bar?
+
+	/* TODO this API was removed in Fyne v2.0.0
+	// Update Status
 	if widget.Renderer(ff.bInfo) != nil {
 		ff.bInfo.SetText("Loading Images")
 	}
-	canvas.Refresh(ff.images)
+	*/
 
-	i := 0
-	luri, err := storage.ListerForURI(dir)
-	if err != nil {
-		return
-	} else {
-		uris, err := luri.List()
-		if err != nil {
-			return
-		}
+	// Update Table
+	ff.localImages.Update(dir)
 
-		thumbQueue := make(chan gridImage, len(uris))
-		quitQueue := make(chan string, 4)
-		for workers := 0; workers < 4; workers++ {
-			go thumbnail(ff, thumbQueue, quitQueue)
-		}
-
-		for _, u := range uris {
-			if strings.HasPrefix(u.Name(), ".") == false {
-				if fileIsImage(u) {
-					gi := &gridImage{image: u, ff: ff}
-					thumbQueue <- *gi
-					i++
-				}
-			}
-		}
-	}
+	// Update Status
 	output := "No Images"
-	if i > 0 {
-		output = fmt.Sprintf("Total: %d Images", i)
+	count := ff.localImages.Count()
+	if count > 0 {
+		output = fmt.Sprintf("Total: %d Images", count)
+	}
+	ff.bInfo.SetText(output)
+}
+
+func populateSpace(ff *FyFoto) {
+	// Get BC Node
+	node, err := ff.spaceFyne.GetNode(&ff.spaceClient.BCClient)
+	if err != nil {
+		ff.spaceFyne.ShowError(err)
+		return
+	}
+	populateSpaceWithNode(ff, node)
+}
+
+func populateSpaceWithNode(ff *FyFoto, node *bcgo.Node) {
+	// TODO Should this show a Progress Bar?
+
+	/* TODO this API was removed in Fyne v2.0.0
+	// Update Status
+	if widget.Renderer(ff.bInfo) != nil {
+		ff.bInfo.SetText("Loading Images")
+	}
+	*/
+
+	// Update Table
+	ff.spaceImages.Update(node)
+
+	// Update Status
+	output := "No Images"
+	count := ff.spaceImages.Count()
+	if count > 0 {
+		output = fmt.Sprintf("Total: %d Images", count)
 	}
 	ff.bInfo.SetText(output)
 }
 
 func hideFolders(ff *FyFoto) {
-	ff.dirs.Hide()
+	ff.localDirs.Hide()
 	ff.dirsHidden = 1
 	canvas.Refresh(ff.browser)
 }
 
 func showFolders(ff *FyFoto) {
-	ff.dirs.Show()
+	ff.localDirs.Show()
 	ff.dirsHidden = 0
 	canvas.Refresh(ff.browser)
 }
 
 func hideBrowser(ff *FyFoto) {
-	ff.images.Hide()
-	ff.iScroller.Hide()
-	ff.dirs.Hide()
-	ff.bToolbar.Hide()
-	ff.bInfo.Hide()
+	ff.browser.Hide()
 }
 
 func showBrowser(ff *FyFoto, dir fyne.URI) {
-	ff.images.Show()
-	ff.iScroller.Show()
-	ff.dirs.Show()
-	ff.bToolbar.Show()
-	ff.bInfo.Show()
+	ff.browser.Show()
 	ff.window.SetTitle("FyFoto - " + dir.String())
 	canvas.Refresh(ff.main)
 
 	if dir != ff.currentDir {
 		ff.currentDir = dir
-
-		go populate(ff, dir)
+		go populateLocal(ff, dir)
 	}
 }
 
-func createBrowser(ff *FyFoto) {
-	ff.bToolbar = widget.NewToolbar(
-		widget.NewToolbarAction(theme.FolderIcon(),
-			func() {
-				if ff.dirsHidden > 0 {
-					showFolders(ff)
-				} else {
-					hideFolders(ff)
-				}
-			}),
-		widget.NewToolbarSpacer(),
-		widget.NewToolbarAction(theme.SettingsIcon(),
-			func() {
-				dialog.ShowInformation("About", "FyFoto - A Cross-Platform Image Application", ff.window)
-			}))
+func showAbout(ff *FyFoto) {
+	dialog.ShowInformation("About", "FyFoto - A Cross-Platform Image Application\n\nS P A C E - A Secure, Private, Storage Platform ", ff.window)
+}
 
-	ff.dirs = &widget.Tree {
-		Root: ff.rootDir.String(),
-		IsBranch: func(uid string) bool {
-			_, err := storage.ListerForURI(storage.NewURI(uid))
-			return err == nil
-		},
-		CreateNode: func(branch bool) fyne.CanvasObject {
-			var icon fyne.CanvasObject
-			if branch {
-				icon = widget.NewIcon(nil)
+func createBrowser(ff *FyFoto) {
+	ff.localToolbar = widget.NewToolbar(
+		widget.NewToolbarAction(theme.FolderIcon(), func() {
+			if ff.dirsHidden > 0 {
+				showFolders(ff)
 			} else {
-				icon = widget.NewFileIcon(nil)
+				hideFolders(ff)
 			}
-			return fyne.NewContainerWithLayout(layout.NewHBoxLayout(), icon, widget.NewLabel("Template Object"))
-		},
-	}
-	ff.dirs.ChildUIDs = func(uid string) (c []string) {
-		luri, err := storage.ListerForURI(storage.NewURI(uid))
-		if err != nil {
-			fyne.LogError("Unable to get lister for "+uid, err)
-		} else {
-			uris, err := luri.List()
-			if err != nil {
-				return
-			} else {
-				// Filter URIs
-				var us []fyne.URI
-				for _, u := range uris {
-					_, err := storage.ListerForURI(u)
-					if err == nil && !strings.HasPrefix(u.Name(), ".") {
-						us = append(us, u)
-					}
-				}
-				// Convert to Strings
-				for _, u := range us {
-					c = append(c, u.String())
-				}
-			}
-		}
-		return
-	}
-	ff.dirs.UpdateNode = func(uid string, branch bool, node fyne.CanvasObject) {
-		uri := storage.NewURI(uid)
-		c := node.(*fyne.Container)
-		if branch {
-			var r fyne.Resource
-			if ff.dirs.IsBranchOpen(uid) {
-				// Set open folder icon
-				r = theme.FolderOpenIcon()
-			} else {
-				// Set folder icon
-				r = theme.FolderIcon()
-			}
-			c.Objects[0].(*widget.Icon).SetResource(r)
-		} else {
-			// Set file uri to update icon
-			c.Objects[0].(*widget.FileIcon).SetURI(uri)
-		}
-		l := c.Objects[1].(*widget.Label)
-		if ff.dirs.Root == uid {
-			l.SetText(uid)
-		} else {
-			l.SetText(uri.Name())
-		}
-	}
-	ff.dirs.OnSelected = func(uid string) {
+		}),
+		widget.NewToolbarSpacer(),
+		widget.NewToolbarAction(theme.InfoIcon(), func() {
+			showAbout(ff)
+		}),
+	)
+	ff.localDirs = ui.NewFileTree(ff.rootDir)
+	ff.localDirs.OnSelected = func(uid string) {
 		u := storage.NewURI(uid)
 		ff.currentDir = u
-		go populate(ff, u)
+		go populateLocal(ff, u)
 	}
+	ff.localImages = ui.NewLocalThumbnailTable(func(id string, uri fyne.URI) {
+		hideBrowser(ff)
+		showViewer(ff, uri.Name(), uri)
+	})
 
-	size := int(math.Floor(float64(128 * ff.window.Canvas().Scale())))
-	ff.images = fyne.NewContainerWithLayout(layout.NewFixedGridLayout(fyne.NewSize(size, size)))
-	ff.iScroller = widget.NewScrollContainer(ff.images)
+	ff.spaceToolbar = widget.NewToolbar(
+		widget.NewToolbarAction(theme.ContentAddIcon(), func() {
+			go func() {
+				node, err := ff.spaceFyne.GetNode(&ff.spaceClient.BCClient)
+				if err != nil {
+					ff.spaceFyne.ShowError(err)
+					return
+				}
+				d := dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
+					if err != nil {
+						ff.spaceFyne.ShowError(err)
+						return
+					}
+					if reader == nil {
+						return
+					}
+					name := reader.URI().Name()
 
+					// Show progress dialog
+					progress := dialog.NewProgress("Uploading", "Uploading "+name, ff.spaceFyne.Window)
+					progress.Show()
+					defer progress.Hide()
+					listener := &bcui.ProgressMiningListener{Func: progress.SetValue}
+
+					reference, err := ff.spaceClient.Add(node, listener, name, reader.URI().MimeType(), reader)
+					if err != nil {
+						ff.spaceFyne.ShowError(err)
+					}
+					fmt.Println("Uploaded:", reference)
+					go populateSpaceWithNode(ff, node)
+				}, ff.spaceFyne.Window)
+				d.SetFilter(storage.NewMimeTypeFileFilter([]string{"image/*"}))
+				d.Show()
+			}()
+		}),
+		widget.NewToolbarAction(theme.ViewRefreshIcon(), func() {
+			go populateSpace(ff)
+		}),
+		widget.NewToolbarAction(theme.SearchIcon(), func() {
+			go ff.spaceFyne.SearchFile(ff.spaceClient)
+		}),
+		widget.NewToolbarSpacer(),
+		widget.NewToolbarAction(theme.NewThemedResource(spaceuidata.StorageIcon), func() {
+			go ff.spaceFyne.ShowStorage(ff.spaceClient)
+		}),
+		widget.NewToolbarAction(theme.NewThemedResource(bcuidata.AccountIcon), func() {
+			go ff.spaceFyne.ShowAccount(&ff.spaceClient.BCClient)
+		}),
+		widget.NewToolbarAction(theme.HelpIcon(), func() {
+			go ff.spaceFyne.ShowHelp(ff.spaceClient)
+		}),
+		widget.NewToolbarAction(theme.InfoIcon(), func() {
+			showAbout(ff)
+		}),
+	)
+	// Create list of thumbnails
+	ff.spaceImages = ui.NewSpaceThumbnailTable(ff.spaceClient, func(id string, timestamp uint64, meta *spacego.Meta) {
+		node, err := ff.spaceFyne.GetNode(&ff.spaceClient.BCClient)
+		if err != nil {
+			ff.spaceFyne.ShowError(err)
+			return
+		}
+
+		c, err := filesystem.ImageCache()
+		if err != nil {
+			ff.spaceFyne.ShowError(err)
+			return
+		}
+
+		file := filepath.Join(c, id)
+		if _, err := os.Stat(file); os.IsNotExist(err) {
+			progress := dialog.NewProgressInfinite("Downloading", "Downloading "+meta.Name, ff.spaceFyne.Window)
+			progress.Show()
+			defer progress.Hide()
+
+			hash, err := base64.RawURLEncoding.DecodeString(id)
+			if err != nil {
+				ff.spaceFyne.ShowError(err)
+				return
+			}
+			out, err := os.Create(file)
+			if err != nil {
+				ff.spaceFyne.ShowError(err)
+				return
+			}
+			reader, err := ff.spaceClient.ReadFile(node, hash)
+			if err != nil {
+				ff.spaceFyne.ShowError(err)
+				return
+			}
+			count, err := io.Copy(out, reader)
+			if err != nil {
+				ff.spaceFyne.ShowError(err)
+				return
+			}
+			fmt.Println("Wrote", bcgo.BinarySizeToString(uint64(count)), "to", file)
+		}
+		hideBrowser(ff)
+		showViewer(ff, meta.Name, storage.NewFileURI(file))
+	})
+
+	ff.bSources = container.NewAppTabs(
+		container.NewTabItem("Local", container.NewBorder(ff.localToolbar, nil, ff.localDirs, nil, ff.localImages)),
+		container.NewTabItem(spacego.SPACE, container.NewBorder(ff.spaceToolbar, nil, nil, nil, ff.spaceImages)),
+	)
+	ff.bSources.OnChanged = func(tab *container.TabItem) {
+		switch tab.Text {
+		case "Local":
+			ff.window.SetTitle("FyFoto - " + ff.currentDir.String())
+			go populateLocal(ff, ff.currentDir)
+		case spacego.SPACE:
+			ff.window.SetTitle("FyFoto - " + spacego.SPACE)
+			go populateSpace(ff)
+		}
+	}
 	ff.bInfo = widget.NewLabelWithStyle("No Images", fyne.TextAlignCenter, fyne.TextStyle{})
 
-	ff.browser = fyne.NewContainerWithLayout(layout.NewBorderLayout(ff.bToolbar, ff.bInfo, ff.dirs, nil),
-		ff.bToolbar, ff.bInfo, ff.dirs, ff.iScroller)
+	ff.browser = container.NewBorder(nil, ff.bInfo, nil, nil, ff.bSources)
 }
