@@ -1,0 +1,8 @@
+# Fyne Cross
+fyne-cross/
+
+# Private
+private/
+
+# Tests
+**/testdata/failed
