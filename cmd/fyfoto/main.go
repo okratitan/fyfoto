@@ -63,9 +63,6 @@ func main() {
 	ff.rootDir = storage.NewFileURI(*dirPtr)
 	ff.window = ff.app.NewWindow("FyFoto")
 	ff.spaceFyne = spacefynego.NewSpaceFyne(ff.app, ff.window, ff.spaceClient)
-	ff.spaceFyne.OnKeysImported = func(alias string) {
-		go populateSpace(ff)
-	}
 	onSignedIn := ff.spaceFyne.OnSignedIn
 	ff.spaceFyne.OnSignedIn = func(node *bcgo.Node) {
 		if onSignedIn != nil {
@@ -73,7 +70,11 @@ func main() {
 		}
 		go populateSpaceWithNode(ff, node)
 	}
+	onSignedOut := ff.spaceFyne.OnSignedOut
 	ff.spaceFyne.OnSignedOut = func() {
+		if onSignedOut != nil {
+			onSignedOut()
+		}
 		ff.spaceImages.Clear()
 		ff.bInfo.SetText("")
 	}
