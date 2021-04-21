@@ -17,5 +17,5 @@
 package bcgo
 
 type Validator interface {
-	Validate(channel *Channel, cache Cache, network Network, hash []byte, block *Block) error
+	Validate(channel Channel, cache Cache, network Network, hash []byte, block *Block) error
 }

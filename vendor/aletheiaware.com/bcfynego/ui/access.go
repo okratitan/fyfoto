@@ -28,13 +28,13 @@ import (
 type AccessView struct {
 	widget.Form
 	ui                  UI
-	client              *bcclientgo.BCClient
+	client              bcclientgo.BCClient
 	alias               *Link
 	secretKey           *widget.Label
 	encryptionAlgorithm *widget.Label
 }
 
-func NewAccessView(ui UI, client *bcclientgo.BCClient) *AccessView {
+func NewAccessView(ui UI, client bcclientgo.BCClient) *AccessView {
 	v := &AccessView{
 		ui:     ui,
 		client: client,

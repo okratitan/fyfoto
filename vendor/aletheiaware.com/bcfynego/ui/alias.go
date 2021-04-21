@@ -48,13 +48,13 @@ func (a *AliasLabel) SetAlias(alias string) {
 type AliasView struct {
 	widget.Form
 	ui        UI
-	client    *bcclientgo.BCClient
+	client    bcclientgo.BCClient
 	timestamp *TimestampLabel
 	alias     *AliasLabel
 	key       *KeyLabel
 }
 
-func NewAliasView(ui UI, client *bcclientgo.BCClient) *AliasView {
+func NewAliasView(ui UI, client bcclientgo.BCClient) *AliasView {
 	v := &AliasView{
 		ui:        ui,
 		client:    client,
@@ -73,11 +73,11 @@ func NewAliasView(ui UI, client *bcclientgo.BCClient) *AliasView {
 }
 
 func (v *AliasView) SetURI(uri storage.AliasURI) error {
-	cache, err := v.client.GetCache()
+	cache, err := v.client.Cache()
 	if err != nil {
 		return err
 	}
-	network, err := v.client.GetNetwork()
+	network, err := v.client.Network()
 	if err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func (v *AliasView) SetURI(uri storage.AliasURI) error {
 		// Ignored
 	}
 	alias := uri.Alias()
-	r, a, err := aliasgo.GetRecord(aliases, cache, network, alias)
+	r, a, err := aliasgo.Record(aliases, cache, network, alias)
 	if err != nil {
 		return err
 	}

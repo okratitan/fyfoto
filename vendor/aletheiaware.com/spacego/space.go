@@ -18,17 +18,18 @@ package spacego
 
 import (
 	"aletheiaware.com/bcgo"
+	"aletheiaware.com/bcgo/channel"
+	"aletheiaware.com/bcgo/validation"
 	"aletheiaware.com/financego"
-	"crypto/rsa"
 	"github.com/golang/protobuf/proto"
 	"io"
+	"log"
+	"sort"
+	"strings"
 )
 
 const (
 	SPACE              = "S P A C E"
-	SPACE_HOUR         = "Space-Hour"
-	SPACE_DAY          = "Space-Day"
-	SPACE_YEAR         = "Space-Year"
 	SPACE_CHARGE       = "Space-Charge"
 	SPACE_INVOICE      = "Space-Invoice"
 	SPACE_REGISTRAR    = "Space-Registrar"
@@ -36,13 +37,18 @@ const (
 	SPACE_SUBSCRIPTION = "Space-Subscription"
 	SPACE_USAGE_RECORD = "Space-Usage-Record"
 
-	SPACE_PREFIX         = "Space-"
-	SPACE_PREFIX_DELTA   = "Space-Delta-"
-	SPACE_PREFIX_META    = "Space-Meta-"
-	SPACE_PREFIX_PREVIEW = "Space-Preview-"
-	SPACE_PREFIX_TAG     = "Space-Tag-"
+	SPACE_PREFIX            = "Space-"
+	SPACE_PREFIX_DELTA      = "Space-Delta-"
+	SPACE_PREFIX_META       = "Space-Meta-"
+	SPACE_PREFIX_PREVIEW    = "Space-Preview-"
+	SPACE_PREFIX_TAG        = "Space-Tag-"
+	SPACE_PREFIX_VALIDATION = "Space-Validation-"
 
-	THRESHOLD = bcgo.THRESHOLD_G
+	THRESHOLD_ACCOUNTING = bcgo.THRESHOLD_G // Charge, Invoice, Registrar, Registration, Subscription, Usage Record Channels
+	THRESHOLD_CUSTOMER   = bcgo.THRESHOLD_Z // Delta, Meta, Preview, Tag Channels
+	THRESHOLD_VALIDATION = validation.THRESHOLD_PERIOD_DAY
+
+	PERIOD_VALIDATION = validation.PERIOD_DAILY
 
 	MIME_TYPE_UNKNOWN    = "?/?"
 	MIME_TYPE_IMAGE_JPEG = "image/jpeg"
@@ -76,7 +82,7 @@ type RegistrarCallback func(*bcgo.BlockEntry, *Registrar) error
 
 type TagCallback func(*bcgo.BlockEntry, *Tag) error
 
-func GetSpaceHosts() []string {
+func SpaceHosts() []string {
 	if bcgo.IsLive() {
 		return []string{
 			"space-nyc.aletheiaware.com",
@@ -88,78 +94,110 @@ func GetSpaceHosts() []string {
 	}
 }
 
-func openLivePoWChannel(name string, threshold uint64) *bcgo.Channel {
-	c := bcgo.OpenPoWChannel(name, threshold)
-	c.AddValidator(&bcgo.LiveValidator{})
+func MimeTypes() []string {
+	mimes := []string{
+		MIME_TYPE_IMAGE_JPEG,
+		MIME_TYPE_IMAGE_JPG,
+		MIME_TYPE_IMAGE_GIF,
+		MIME_TYPE_IMAGE_PNG,
+		MIME_TYPE_IMAGE_WEBP,
+		MIME_TYPE_TEXT_PLAIN,
+		MIME_TYPE_PDF,
+		MIME_TYPE_PROTOBUF,
+		MIME_TYPE_VIDEO_MPEG,
+		MIME_TYPE_AUDIO_MPEG,
+	}
+	sort.Strings(mimes)
+	return mimes
+}
+
+func Validator(node bcgo.Node, channel bcgo.Channel, listener bcgo.MiningListener) validation.Periodic {
+	return validation.NewDaily(node, channel, listener)
+}
+
+func openChannel(name string, threshold uint64) bcgo.Channel {
+	c := channel.NewPoW(name, threshold)
+	c.AddValidator(&validation.Live{})
+	// TODO c.AddValidator(&validation.Signature{})
 	return c
 }
 
-func OpenHourChannel() *bcgo.Channel {
-	return openLivePoWChannel(SPACE_HOUR, bcgo.THRESHOLD_PERIOD_HOUR)
+/* TODO
+func openCustomerChannel(customer, name string, threshold uint64) bcgo.Channel {
+	c := openChannel(name, threshold)
+	c.AddValidator(&validation.Creator{
+		Creator: customer,
+	})
+	return c
+}
+*/
+
+func OpenChargeChannel() bcgo.Channel {
+	return openChannel(SPACE_CHARGE, THRESHOLD_ACCOUNTING)
 }
 
-func OpenDayChannel() *bcgo.Channel {
-	return openLivePoWChannel(SPACE_DAY, bcgo.THRESHOLD_PERIOD_DAY)
+func OpenInvoiceChannel() bcgo.Channel {
+	return openChannel(SPACE_INVOICE, THRESHOLD_ACCOUNTING)
 }
 
-func OpenYearChannel() *bcgo.Channel {
-	return openLivePoWChannel(SPACE_YEAR, bcgo.THRESHOLD_PERIOD_YEAR)
+func OpenRegistrarChannel() bcgo.Channel {
+	return openChannel(SPACE_REGISTRAR, THRESHOLD_ACCOUNTING)
 }
 
-func OpenChargeChannel() *bcgo.Channel {
-	return openLivePoWChannel(SPACE_CHARGE, THRESHOLD)
+func OpenRegistrationChannel() bcgo.Channel {
+	return openChannel(SPACE_REGISTRATION, THRESHOLD_ACCOUNTING)
 }
 
-func OpenInvoiceChannel() *bcgo.Channel {
-	return openLivePoWChannel(SPACE_INVOICE, THRESHOLD)
+func OpenSubscriptionChannel() bcgo.Channel {
+	return openChannel(SPACE_SUBSCRIPTION, THRESHOLD_ACCOUNTING)
 }
 
-func OpenRegistrarChannel() *bcgo.Channel {
-	return openLivePoWChannel(SPACE_REGISTRAR, THRESHOLD)
+func OpenUsageRecordChannel() bcgo.Channel {
+	return openChannel(SPACE_USAGE_RECORD, THRESHOLD_ACCOUNTING)
 }
 
-func OpenRegistrationChannel() *bcgo.Channel {
-	return openLivePoWChannel(SPACE_REGISTRATION, THRESHOLD)
-}
-
-func OpenSubscriptionChannel() *bcgo.Channel {
-	return openLivePoWChannel(SPACE_SUBSCRIPTION, THRESHOLD)
-}
-
-func OpenUsageRecordChannel() *bcgo.Channel {
-	return openLivePoWChannel(SPACE_USAGE_RECORD, THRESHOLD)
-}
-
-func GetDeltaChannelName(metaId string) string {
+func DeltaChannelName(metaId string) string {
 	return SPACE_PREFIX_DELTA + metaId
 }
 
-func GetMetaChannelName(alias string) string {
+func MetaChannelName(alias string) string {
 	return SPACE_PREFIX_META + alias
 }
 
-func GetPreviewChannelName(metaId string) string {
+func PreviewChannelName(metaId string) string {
 	return SPACE_PREFIX_PREVIEW + metaId
 }
 
-func GetTagChannelName(metaId string) string {
+func TagChannelName(metaId string) string {
 	return SPACE_PREFIX_TAG + metaId
 }
 
-func OpenDeltaChannel(metaId string) *bcgo.Channel {
-	return openLivePoWChannel(GetDeltaChannelName(metaId), THRESHOLD)
+func ValidationChannelName(alias string) string {
+	return SPACE_PREFIX_VALIDATION + alias
 }
 
-func OpenMetaChannel(alias string) *bcgo.Channel {
-	return openLivePoWChannel(GetMetaChannelName(alias), THRESHOLD)
+func OpenDeltaChannel(metaId string) bcgo.Channel {
+	// TODO return openCustomerChannel(alias, DeltaChannelName(metaId), THRESHOLD_CUSTOMER)
+	return openChannel(DeltaChannelName(metaId), THRESHOLD_CUSTOMER)
 }
 
-func OpenPreviewChannel(metaId string) *bcgo.Channel {
-	return openLivePoWChannel(GetPreviewChannelName(metaId), THRESHOLD)
+func OpenMetaChannel(alias string) bcgo.Channel {
+	// TODO return openCustomerChannel(alias, MetaChannelName(alias), THRESHOLD_CUSTOMER)
+	return openChannel(MetaChannelName(alias), THRESHOLD_CUSTOMER)
 }
 
-func OpenTagChannel(metaId string) *bcgo.Channel {
-	return openLivePoWChannel(GetTagChannelName(metaId), THRESHOLD)
+func OpenPreviewChannel(metaId string) bcgo.Channel {
+	// TODO return openCustomerChannel(alias, PreviewChannelName(metaId), THRESHOLD_CUSTOMER)
+	return openChannel(PreviewChannelName(metaId), THRESHOLD_CUSTOMER)
+}
+
+func OpenTagChannel(metaId string) bcgo.Channel {
+	// TODO return openCustomerChannel(alias, TagChannelName(metaId), THRESHOLD_CUSTOMER)
+	return openChannel(TagChannelName(metaId), THRESHOLD_CUSTOMER)
+}
+
+func OpenValidationChannel(alias string) bcgo.Channel {
+	return openChannel(ValidationChannelName(alias), THRESHOLD_VALIDATION)
 }
 
 func ApplyDelta(delta *Delta, input []byte) []byte {
@@ -204,22 +242,33 @@ func CreateDeltas(reader io.Reader, max uint64, callback func(*Delta) error) err
 	return nil
 }
 
-func GetThreshold(channel string) uint64 {
+func Threshold(channel string) uint64 {
 	switch channel {
-	case SPACE_HOUR:
-		return bcgo.THRESHOLD_PERIOD_HOUR
-	case SPACE_DAY:
-		return bcgo.THRESHOLD_PERIOD_DAY
-	case SPACE_YEAR:
-		return bcgo.THRESHOLD_PERIOD_YEAR
+	case SPACE_CHARGE,
+		SPACE_INVOICE,
+		SPACE_REGISTRAR,
+		SPACE_REGISTRATION,
+		SPACE_SUBSCRIPTION,
+		SPACE_USAGE_RECORD:
+		return THRESHOLD_ACCOUNTING
 	default:
-		return THRESHOLD
+		switch {
+		case strings.HasPrefix(channel, SPACE_PREFIX_VALIDATION):
+			return THRESHOLD_VALIDATION
+		case strings.HasPrefix(channel, SPACE_PREFIX_DELTA),
+			strings.HasPrefix(channel, SPACE_PREFIX_META),
+			strings.HasPrefix(channel, SPACE_PREFIX_PREVIEW),
+			strings.HasPrefix(channel, SPACE_PREFIX_TAG):
+			return THRESHOLD_CUSTOMER
+		default:
+			return 0
+		}
 	}
 }
 
-func GetRegistrar(registrars *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, alias string) (*Registrar, error) {
+func RegistrarForAlias(registrars bcgo.Channel, cache bcgo.Cache, network bcgo.Network, alias string) (*Registrar, error) {
 	var registrar *Registrar
-	if err := bcgo.Read(registrars.Name, registrars.Head, nil, cache, network, "", nil, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
+	if err := bcgo.Read(registrars.Name(), registrars.Head(), nil, cache, network, nil, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
 		// Unmarshal as Registrar
 		r := &Registrar{}
 		err := proto.Unmarshal(data, r)
@@ -228,12 +277,12 @@ func GetRegistrar(registrars *bcgo.Channel, cache bcgo.Cache, network bcgo.Netwo
 		}
 		if r.Merchant.Alias == alias {
 			registrar = r
-			return bcgo.StopIterationError{}
+			return bcgo.ErrStopIteration{}
 		}
 		return nil
 	}); err != nil {
 		switch err.(type) {
-		case bcgo.StopIterationError:
+		case bcgo.ErrStopIteration:
 			// Do nothing
 			break
 		default:
@@ -243,29 +292,15 @@ func GetRegistrar(registrars *bcgo.Channel, cache bcgo.Cache, network bcgo.Netwo
 	return registrar, nil
 }
 
-func GetRegistrars(registrars *bcgo.Channel, cache bcgo.Cache, network bcgo.Network) (rs []*Registrar) {
-	bcgo.Read(registrars.Name, registrars.Head, nil, cache, network, "", nil, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
-		// Unmarshal as Registrar
-		r := &Registrar{}
-		err := proto.Unmarshal(data, r)
-		if err != nil {
-			return err
-		}
-		rs = append(rs, r)
-		return nil
-	})
-	return
-}
-
-// GetAllRegistrars triggers the given callback for each registrar.
-func GetAllRegistrars(node *bcgo.Node, callback RegistrarCallback) error {
-	registrars := node.GetOrOpenChannel(SPACE_REGISTRAR, func() *bcgo.Channel {
+// AllRegistrars triggers the given callback for each registrar.
+func AllRegistrars(node bcgo.Node, callback RegistrarCallback) error {
+	registrars := node.OpenChannel(SPACE_REGISTRAR, func() bcgo.Channel {
 		return OpenRegistrarChannel()
 	})
-	if err := registrars.Refresh(node.Cache, node.Network); err != nil {
-		// Ignored
+	if err := registrars.Refresh(node.Cache(), node.Network()); err != nil {
+		log.Println(err)
 	}
-	return bcgo.Read(registrars.Name, registrars.Head, nil, node.Cache, node.Network, "", nil, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
+	return bcgo.Read(registrars.Name(), registrars.Head(), nil, node.Cache(), node.Network(), node.Account(), nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
 		// Unmarshal as Registrar
 		r := &Registrar{}
 		err := proto.Unmarshal(data, r)
@@ -276,11 +311,11 @@ func GetAllRegistrars(node *bcgo.Node, callback RegistrarCallback) error {
 	})
 }
 
-// GetAllRegistrarsForNode triggers the given callback for each registrar with which the given node is registered, and optionally subscribed
-func GetAllRegistrarsForNode(node *bcgo.Node, callback func(*Registrar, *financego.Registration, *financego.Subscription) error) error {
+// AllRegistrarsForNode triggers the given callback for each registrar with which the given node is registered, and optionally subscribed
+func AllRegistrarsForNode(node bcgo.Node, callback func(*Registrar, *financego.Registration, *financego.Subscription) error) error {
 	// Get registrars
 	as := make(map[string]*Registrar)
-	if err := GetAllRegistrars(node, func(e *bcgo.BlockEntry, r *Registrar) error {
+	if err := AllRegistrars(node, func(e *bcgo.BlockEntry, r *Registrar) error {
 		as[r.Merchant.Alias] = r
 		return nil
 	}); err != nil {
@@ -288,7 +323,7 @@ func GetAllRegistrarsForNode(node *bcgo.Node, callback func(*Registrar, *finance
 	}
 	// Get registrations
 	rs := make(map[string]*financego.Registration)
-	if err := GetAllRegistrationsForNode(node, func(e *bcgo.BlockEntry, r *financego.Registration) error {
+	if err := AllRegistrationsForNode(node, func(e *bcgo.BlockEntry, r *financego.Registration) error {
 		if _, ok := as[r.MerchantAlias]; ok {
 			rs[r.MerchantAlias] = r
 		}
@@ -298,7 +333,7 @@ func GetAllRegistrarsForNode(node *bcgo.Node, callback func(*Registrar, *finance
 	}
 	// Get subscriptions
 	ss := make(map[string]*financego.Subscription)
-	if err := GetAllSubscriptionsForNode(node, func(e *bcgo.BlockEntry, s *financego.Subscription) error {
+	if err := AllSubscriptionsForNode(node, func(e *bcgo.BlockEntry, s *financego.Subscription) error {
 		if _, ok := as[s.MerchantAlias]; ok {
 			ss[s.MerchantAlias] = s
 		}
@@ -318,52 +353,54 @@ func GetAllRegistrarsForNode(node *bcgo.Node, callback func(*Registrar, *finance
 	return nil
 }
 
-// GetAllRegistrationsForNode triggers the given callback for each registration.
-func GetAllRegistrationsForNode(node *bcgo.Node, callback financego.RegistrationCallback) error {
-	registrations := node.GetOrOpenChannel(SPACE_REGISTRATION, func() *bcgo.Channel {
+// AllRegistrationsForNode triggers the given callback for each registration.
+func AllRegistrationsForNode(node bcgo.Node, callback financego.RegistrationCallback) error {
+	registrations := node.OpenChannel(SPACE_REGISTRATION, func() bcgo.Channel {
 		return OpenRegistrationChannel()
 	})
-	if err := registrations.Refresh(node.Cache, node.Network); err != nil {
-		// Ignored
+	if err := registrations.Refresh(node.Cache(), node.Network()); err != nil {
+		log.Println(err)
 	}
-	return bcgo.Read(registrations.Name, registrations.Head, nil, node.Cache, node.Network, node.Alias, node.Key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
+	alias := node.Account().Alias()
+	return bcgo.Read(registrations.Name(), registrations.Head(), nil, node.Cache(), node.Network(), node.Account(), nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
 		// Unmarshal as Registration
 		r := &financego.Registration{}
 		err := proto.Unmarshal(data, r)
 		if err != nil {
 			return err
 		}
-		if node.Alias == r.CustomerAlias {
+		if alias == r.CustomerAlias {
 			return callback(entry, r)
 		}
 		return nil
 	})
 }
 
-// GetAllSubscriptionsForNode triggers the given callback for each subscription.
-func GetAllSubscriptionsForNode(node *bcgo.Node, callback financego.SubscriptionCallback) error {
-	subscriptions := node.GetOrOpenChannel(SPACE_SUBSCRIPTION, func() *bcgo.Channel {
+// AllSubscriptionsForNode triggers the given callback for each subscription.
+func AllSubscriptionsForNode(node bcgo.Node, callback financego.SubscriptionCallback) error {
+	subscriptions := node.OpenChannel(SPACE_SUBSCRIPTION, func() bcgo.Channel {
 		return OpenSubscriptionChannel()
 	})
-	if err := subscriptions.Refresh(node.Cache, node.Network); err != nil {
-		// Ignored
+	if err := subscriptions.Refresh(node.Cache(), node.Network()); err != nil {
+		log.Println(err)
 	}
-	return bcgo.Read(subscriptions.Name, subscriptions.Head, nil, node.Cache, node.Network, node.Alias, node.Key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
+	alias := node.Account().Alias()
+	return bcgo.Read(subscriptions.Name(), subscriptions.Head(), nil, node.Cache(), node.Network(), node.Account(), nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
 		// Unmarshal as Subscription
 		s := &financego.Subscription{}
 		err := proto.Unmarshal(data, s)
 		if err != nil {
 			return err
 		}
-		if node.Alias == s.CustomerAlias {
+		if alias == s.CustomerAlias {
 			return callback(entry, s)
 		}
 		return nil
 	})
 }
 
-func GetDelta(deltas *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, alias string, key *rsa.PrivateKey, recordHash []byte, callback DeltaCallback) error {
-	return bcgo.Read(deltas.Name, deltas.Head, nil, cache, network, alias, key, recordHash, func(entry *bcgo.BlockEntry, key, data []byte) error {
+func ReadDelta(deltas bcgo.Channel, cache bcgo.Cache, network bcgo.Network, account bcgo.Account, recordHash []byte, callback DeltaCallback) error {
+	return bcgo.Read(deltas.Name(), deltas.Head(), nil, cache, network, account, recordHash, func(entry *bcgo.BlockEntry, key, data []byte) error {
 		// Unmarshal as Delta
 		d := &Delta{}
 		err := proto.Unmarshal(data, d)
@@ -374,8 +411,8 @@ func GetDelta(deltas *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, alia
 	})
 }
 
-func GetMeta(metas *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, alias string, key *rsa.PrivateKey, recordHash []byte, callback MetaCallback) error {
-	return bcgo.Read(metas.Name, metas.Head, nil, cache, network, alias, key, recordHash, func(entry *bcgo.BlockEntry, key, data []byte) error {
+func ReadMeta(metas bcgo.Channel, cache bcgo.Cache, network bcgo.Network, account bcgo.Account, recordHash []byte, callback MetaCallback) error {
+	return bcgo.Read(metas.Name(), metas.Head(), nil, cache, network, account, recordHash, func(entry *bcgo.BlockEntry, key, data []byte) error {
 		// Unmarshal as Meta
 		meta := &Meta{}
 		if err := proto.Unmarshal(data, meta); err != nil {
@@ -385,8 +422,8 @@ func GetMeta(metas *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, alias 
 	})
 }
 
-func GetPreview(previews *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, alias string, key *rsa.PrivateKey, recordHash []byte, callback PreviewCallback) error {
-	return bcgo.Read(previews.Name, previews.Head, nil, cache, network, alias, key, recordHash, func(entry *bcgo.BlockEntry, key, data []byte) error {
+func ReadPreview(previews bcgo.Channel, cache bcgo.Cache, network bcgo.Network, account bcgo.Account, recordHash []byte, callback PreviewCallback) error {
+	return bcgo.Read(previews.Name(), previews.Head(), nil, cache, network, account, recordHash, func(entry *bcgo.BlockEntry, key, data []byte) error {
 		// Unmarshal as Preview
 		preview := &Preview{}
 		if err := proto.Unmarshal(data, preview); err != nil {
@@ -396,8 +433,8 @@ func GetPreview(previews *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, 
 	})
 }
 
-func GetTag(tags *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, alias string, key *rsa.PrivateKey, recordHash []byte, callback TagCallback) error {
-	return bcgo.Read(tags.Name, tags.Head, nil, cache, network, alias, key, recordHash, func(entry *bcgo.BlockEntry, key, data []byte) error {
+func ReadTag(tags bcgo.Channel, cache bcgo.Cache, network bcgo.Network, account bcgo.Account, recordHash []byte, callback TagCallback) error {
+	return bcgo.Read(tags.Name(), tags.Head(), nil, cache, network, account, recordHash, func(entry *bcgo.BlockEntry, key, data []byte) error {
 		// Unmarshal as Tag
 		tag := &Tag{}
 		if err := proto.Unmarshal(data, tag); err != nil {
@@ -407,20 +444,22 @@ func GetTag(tags *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, alias st
 	})
 }
 
-func GetMinimumRegistrars() int {
+func MinimumRegistrars() int {
 	if bcgo.IsLive() {
 		return 3
 	}
 	return 1
 }
 
-func IterateDeltas(node *bcgo.Node, deltas *bcgo.Channel, callback DeltaCallback) error {
+func IterateDeltas(node bcgo.Node, deltas bcgo.Channel, callback DeltaCallback) error {
+	account := node.Account()
+	alias := account.Alias()
 	// Iterate through chain chronologically
-	return bcgo.IterateChronologically(deltas.Name, deltas.Head, nil, node.Cache, node.Network, func(hash []byte, block *bcgo.Block) error {
+	return bcgo.IterateChronologically(deltas.Name(), deltas.Head(), nil, node.Cache(), node.Network(), func(hash []byte, block *bcgo.Block) error {
 		for _, entry := range block.Entry {
 			for _, access := range entry.Record.Access {
-				if node.Alias == access.Alias {
-					if err := bcgo.DecryptRecord(entry, access, node.Key, func(entry *bcgo.BlockEntry, key []byte, data []byte) error {
+				if alias == access.Alias {
+					if err := account.Decrypt(entry, access, func(entry *bcgo.BlockEntry, key []byte, data []byte) error {
 						// Unmarshal as Delta
 						d := &Delta{}
 						if err := proto.Unmarshal(data, d); err != nil {

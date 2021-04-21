@@ -18,10 +18,12 @@ package aliasgo
 
 import (
 	"aletheiaware.com/bcgo"
+	"aletheiaware.com/bcgo/channel"
+	"aletheiaware.com/bcgo/identity"
+	"aletheiaware.com/bcgo/validation"
 	"aletheiaware.com/cryptogo"
 	"crypto/rsa"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"log"
@@ -39,27 +41,14 @@ const (
 
 	MAX_ALIAS_LENGTH = 100
 	MIN_ALIAS_LENGTH = 1
-
-	ERROR_ALIAS_ALREADY_REGISTERED = "Alias Already Registered: %s"
-	ERROR_ALIAS_INVALID            = "Alias Invalid: %s"
-	ERROR_ALIAS_NOT_FOUND          = "Could Not Find Alias For Public Key"
-	ERROR_ALIAS_NOT_PUBLIC         = "Cannot Register Private Alias"
-	ERROR_ALIAS_TOO_LONG           = "Alias Too Long: %d Maximum: %d"
-	ERROR_ALIAS_TOO_SHORT          = "Alias Too Short: %d Minimum: %d"
-	ERROR_PUBLIC_KEY_NOT_FOUND     = "Could Not Find Public Key For Alias"
 )
 
-func OpenAliasChannel() *bcgo.Channel {
-	return &bcgo.Channel{
-		Name: ALIAS,
-		Validators: []bcgo.Validator{
-			&bcgo.LiveValidator{},
-			&bcgo.PoWValidator{
-				Threshold: ALIAS_THRESHOLD,
-			},
-			&AliasValidator{},
-		},
-	}
+func OpenAliasChannel() bcgo.Channel {
+	c := channel.New(ALIAS)
+	c.AddValidator(&validation.Live{})
+	c.AddValidator(validation.NewPoW(ALIAS_THRESHOLD))
+	c.AddValidator(&AliasValidator{})
+	return c
 }
 
 // Validates alias is the correct length and all characters are in the set [a-zA-Z0-9.-_]
@@ -67,20 +56,20 @@ func ValidateAlias(alias string) error {
 	if strings.IndexFunc(alias, func(r rune) bool {
 		return !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '.' && r != '-' && r != '_'
 	}) != -1 {
-		return fmt.Errorf(ERROR_ALIAS_INVALID, alias)
+		return ErrAliasInvalid{Alias: alias}
 	}
 	length := len(alias)
 	if length < MIN_ALIAS_LENGTH {
-		return fmt.Errorf(ERROR_ALIAS_TOO_SHORT, length, MIN_ALIAS_LENGTH)
+		return ErrAliasTooShort{Size: length, Min: MIN_ALIAS_LENGTH}
 	}
 	if length > MAX_ALIAS_LENGTH {
-		return fmt.Errorf(ERROR_ALIAS_TOO_LONG, length, MAX_ALIAS_LENGTH)
+		return ErrAliasTooLong{Size: length, Max: MAX_ALIAS_LENGTH}
 	}
 	return nil
 }
 
-func UniqueAlias(channel *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, alias string) error {
-	return bcgo.Iterate(channel.Name, channel.Head, nil, cache, network, func(hash []byte, block *bcgo.Block) error {
+func UniqueAlias(channel bcgo.Channel, cache bcgo.Cache, network bcgo.Network, alias string) error {
+	return bcgo.Iterate(channel.Name(), channel.Head(), nil, cache, network, func(hash []byte, block *bcgo.Block) error {
 		for _, entry := range block.Entry {
 			record := entry.Record
 			if record.Creator == alias {
@@ -90,7 +79,7 @@ func UniqueAlias(channel *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, 
 					return err
 				}
 				if a.Alias == alias {
-					return fmt.Errorf(ERROR_ALIAS_ALREADY_REGISTERED, alias)
+					return ErrAliasAlreadyRegistered{Alias: alias}
 				}
 			}
 		}
@@ -98,8 +87,8 @@ func UniqueAlias(channel *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, 
 	})
 }
 
-func IterateAliases(channel *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, callback func(*bcgo.BlockEntry, *Alias) error) error {
-	return bcgo.Iterate(channel.Name, channel.Head, nil, cache, network, func(hash []byte, block *bcgo.Block) error {
+func IterateAliases(channel bcgo.Channel, cache bcgo.Cache, network bcgo.Network, callback func(*bcgo.BlockEntry, *Alias) error) error {
+	return bcgo.Iterate(channel.Name(), channel.Head(), nil, cache, network, func(hash []byte, block *bcgo.Block) error {
 		for _, entry := range block.Entry {
 			alias := &Alias{}
 			err := proto.Unmarshal(entry.Record.Payload, alias)
@@ -115,9 +104,9 @@ func IterateAliases(channel *bcgo.Channel, cache bcgo.Cache, network bcgo.Networ
 	})
 }
 
-func GetAlias(channel *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, publicKey *rsa.PublicKey) (*Alias, error) {
+func AliasForKey(channel bcgo.Channel, cache bcgo.Cache, network bcgo.Network, publicKey *rsa.PublicKey) (*Alias, error) {
 	var result *Alias
-	if err := bcgo.Iterate(channel.Name, channel.Head, nil, cache, network, func(hash []byte, block *bcgo.Block) error {
+	if err := bcgo.Iterate(channel.Name(), channel.Head(), nil, cache, network, func(hash []byte, block *bcgo.Block) error {
 		for _, entry := range block.Entry {
 			record := entry.Record
 			a := &Alias{}
@@ -131,13 +120,13 @@ func GetAlias(channel *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, pub
 			}
 			if publicKey.N.Cmp(pk.N) == 0 && publicKey.E == pk.E {
 				result = a
-				return bcgo.StopIterationError{}
+				return bcgo.ErrStopIteration{}
 			}
 		}
 		return nil
 	}); err != nil {
 		switch err.(type) {
-		case bcgo.StopIterationError:
+		case bcgo.ErrStopIteration:
 			// Do nothing
 			break
 		default:
@@ -145,14 +134,14 @@ func GetAlias(channel *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, pub
 		}
 	}
 	if result == nil {
-		return nil, errors.New(ERROR_ALIAS_NOT_FOUND)
+		return nil, ErrAliasNotFound{}
 	}
 	return result, nil
 }
 
-func GetPublicKey(channel *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, alias string) (*rsa.PublicKey, error) {
+func PublicKeyForAlias(channel bcgo.Channel, cache bcgo.Cache, network bcgo.Network, alias string) (*rsa.PublicKey, error) {
 	var result *rsa.PublicKey
-	if err := bcgo.Iterate(channel.Name, channel.Head, nil, cache, network, func(hash []byte, block *bcgo.Block) error {
+	if err := bcgo.Iterate(channel.Name(), channel.Head(), nil, cache, network, func(hash []byte, block *bcgo.Block) error {
 		for _, entry := range block.Entry {
 			record := entry.Record
 			a := &Alias{}
@@ -165,13 +154,13 @@ func GetPublicKey(channel *bcgo.Channel, cache bcgo.Cache, network bcgo.Network,
 				if err != nil {
 					return err
 				}
-				return bcgo.StopIterationError{}
+				return bcgo.ErrStopIteration{}
 			}
 		}
 		return nil
 	}); err != nil {
 		switch err.(type) {
-		case bcgo.StopIterationError:
+		case bcgo.ErrStopIteration:
 			// Do nothing
 			break
 		default:
@@ -179,41 +168,55 @@ func GetPublicKey(channel *bcgo.Channel, cache bcgo.Cache, network bcgo.Network,
 		}
 	}
 	if result == nil {
-		return nil, errors.New(ERROR_PUBLIC_KEY_NOT_FOUND)
+		return nil, ErrPublicKeyNotFound{Alias: alias}
 	}
 	return result, nil
 }
 
-func GetPublicKeys(channel *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, addresses []string) map[string]*rsa.PublicKey {
-	acl := make(map[string]*rsa.PublicKey)
-	if len(addresses) > 0 {
+func PublicKeysForAliases(channel bcgo.Channel, cache bcgo.Cache, network bcgo.Network, aliases []string) (access []bcgo.Identity) {
+	if len(aliases) > 0 {
 		alias := &Alias{}
-		bcgo.Iterate(channel.Name, channel.Head, nil, cache, network, func(hash []byte, block *bcgo.Block) error {
+		bcgo.Iterate(channel.Name(), channel.Head(), nil, cache, network, func(hash []byte, block *bcgo.Block) error {
 			for _, entry := range block.Entry {
 				err := proto.Unmarshal(entry.Record.Payload, alias)
 				if err != nil {
 					return err
 				}
-				for _, address := range addresses {
-					if alias.Alias == address {
+				for _, a := range aliases {
+					if alias.Alias == a {
 						publicKey, err := cryptogo.ParseRSAPublicKey(alias.PublicKey, alias.PublicFormat)
 						if err != nil {
 							return err
 						}
-						acl[address] = publicKey
+						access = append(access, identity.NewRSA(a, publicKey))
 					}
 				}
 			}
 			return nil
 		})
 	}
-	return acl
+	return
 }
 
-func GetRecord(channel *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, alias string) (*bcgo.Record, *Alias, error) {
+func AllPublicKeys(channel bcgo.Channel, cache bcgo.Cache, network bcgo.Network) (map[string]*rsa.PublicKey, error) {
+	aliases := make(map[string]*rsa.PublicKey)
+	if err := IterateAliases(channel, cache, network, func(e *bcgo.BlockEntry, a *Alias) error {
+		key, err := cryptogo.ParseRSAPublicKey(a.PublicKey, a.PublicFormat)
+		if err != nil {
+			return err
+		}
+		aliases[a.Alias] = key
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return aliases, nil
+}
+
+func Record(channel bcgo.Channel, cache bcgo.Cache, network bcgo.Network, alias string) (*bcgo.Record, *Alias, error) {
 	var recordResult *bcgo.Record
 	var aliasResult *Alias
-	if err := bcgo.Iterate(channel.Name, channel.Head, nil, cache, network, func(hash []byte, block *bcgo.Block) error {
+	if err := bcgo.Iterate(channel.Name(), channel.Head(), nil, cache, network, func(hash []byte, block *bcgo.Block) error {
 		for _, entry := range block.Entry {
 			record := entry.Record
 			if record.Creator == alias {
@@ -223,13 +226,13 @@ func GetRecord(channel *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, al
 				if err != nil {
 					return err
 				}
-				return bcgo.StopIterationError{}
+				return bcgo.ErrStopIteration{}
 			}
 		}
 		return nil
 	}); err != nil {
 		switch err.(type) {
-		case bcgo.StopIterationError:
+		case bcgo.ErrStopIteration:
 			// Do nothing
 			break
 		default:
@@ -237,7 +240,7 @@ func GetRecord(channel *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, al
 		}
 	}
 	if recordResult == nil || aliasResult == nil {
-		return nil, nil, errors.New(ERROR_ALIAS_NOT_FOUND)
+		return nil, nil, ErrAliasNotFound{}
 	}
 	return recordResult, aliasResult, nil
 }
@@ -245,13 +248,13 @@ func GetRecord(channel *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, al
 type AliasValidator struct {
 }
 
-func (a *AliasValidator) Validate(channel *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, hash []byte, block *bcgo.Block) error {
+func (a *AliasValidator) Validate(channel bcgo.Channel, cache bcgo.Cache, network bcgo.Network, hash []byte, block *bcgo.Block) error {
 	register := make(map[string]bool)
-	return bcgo.Iterate(channel.Name, hash, block, cache, network, func(h []byte, b *bcgo.Block) error {
+	return bcgo.Iterate(channel.Name(), hash, block, cache, network, func(h []byte, b *bcgo.Block) error {
 		for _, entry := range b.Entry {
 			record := entry.Record
 			if len(record.Access) != 0 {
-				return fmt.Errorf(ERROR_ALIAS_NOT_PUBLIC)
+				return ErrAliasNotPublic{}
 			}
 			a := &Alias{}
 			err := proto.Unmarshal(record.Payload, a)
@@ -263,7 +266,7 @@ func (a *AliasValidator) Validate(channel *bcgo.Channel, cache bcgo.Cache, netwo
 			}
 			v, exists := register[a.Alias]
 			if exists || v {
-				return fmt.Errorf(ERROR_ALIAS_ALREADY_REGISTERED, a.Alias)
+				return ErrAliasAlreadyRegistered{Alias: a.Alias}
 			}
 			register[a.Alias] = true
 		}
@@ -271,74 +274,78 @@ func (a *AliasValidator) Validate(channel *bcgo.Channel, cache bcgo.Cache, netwo
 	})
 }
 
-func Register(node *bcgo.Node, listener bcgo.MiningListener) error {
+func Register(node bcgo.Node, listener bcgo.MiningListener) error {
+	account := node.Account()
+	alias := account.Alias()
+	cache := node.Cache()
+	network := node.Network()
 	// Open Alias Channel
 	aliases := OpenAliasChannel()
-	if err := aliases.Refresh(node.Cache, node.Network); err != nil {
+	if err := aliases.Refresh(cache, network); err != nil {
 		log.Println(err)
 	}
-	if err := ValidateAlias(node.Alias); err != nil {
+	if err := ValidateAlias(alias); err != nil {
 		return err
 	}
 	// Check Alias is unique
-	if err := UniqueAlias(aliases, node.Cache, node.Network, node.Alias); err != nil {
+	if err := UniqueAlias(aliases, cache, network, alias); err != nil {
 		return err
 	}
 	// Register Alias
-	if err := RegisterAlias(bcgo.GetBCWebsite(), node.Alias, node.Key); err != nil {
+	if err := RegisterAlias(bcgo.BCWebsite(), account); err != nil {
 		log.Println("Could not register alias remotely:", err)
 		log.Println("Registering locally")
 		// Create record
-		record, err := CreateSignedAliasRecord(node.Alias, node.Key)
+		record, err := CreateSignedAliasRecord(account)
 		if err != nil {
 			return err
 		}
 
 		// Write record to cache
-		if _, err := bcgo.WriteRecord(ALIAS, node.Cache, record); err != nil {
+		if _, err := bcgo.WriteRecord(ALIAS, cache, record); err != nil {
 			return err
 		}
 
 		// Mine record into blockchain
-		if _, _, err := node.Mine(aliases, ALIAS_THRESHOLD, listener); err != nil {
+		if _, _, err := bcgo.Mine(node, aliases, ALIAS_THRESHOLD, listener); err != nil {
 			return err
 		}
 
 		// Push update to peers
-		if err := aliases.Push(node.Cache, node.Network); err != nil {
+		if err := aliases.Push(cache, network); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func CreateSignedAliasRecord(alias string, privateKey *rsa.PrivateKey) (*bcgo.Record, error) {
+func CreateSignedAliasRecord(account bcgo.Account) (*bcgo.Record, error) {
+	alias := account.Alias()
 	if err := ValidateAlias(alias); err != nil {
 		return nil, err
 	}
 
-	publicKeyBytes, err := cryptogo.RSAPublicKeyToPKIXBytes(&privateKey.PublicKey)
+	publicKey, publicKeyFormat, err := account.PublicKey()
 	if err != nil {
 		return nil, err
 	}
 
-	publicKeyFormat := cryptogo.PublicKeyFormat_PKIX
-	hash, err := cryptogo.HashProtobuf(&Alias{
+	a := &Alias{
 		Alias:        alias,
-		PublicKey:    publicKeyBytes,
+		PublicKey:    publicKey,
 		PublicFormat: publicKeyFormat,
-	})
+	}
+	data, err := proto.Marshal(a)
 	if err != nil {
 		return nil, err
 	}
 
-	signatureAlgorithm := cryptogo.SignatureAlgorithm_SHA512WITHRSA_PSS
-	signature, err := cryptogo.CreateSignature(privateKey, hash, signatureAlgorithm)
+	signature, algorithm, err := account.Sign(data)
 	if err != nil {
 		return nil, err
 	}
 
-	return CreateAliasRecord(alias, publicKeyBytes, publicKeyFormat, signature, signatureAlgorithm)
+	return CreateAliasRecord(alias, publicKey, publicKeyFormat, signature, algorithm)
 }
 
 func CreateAliasRecord(alias string, publicKey []byte, publicKeyFormat cryptogo.PublicKeyFormat, signature []byte, signatureAlgorithm cryptogo.SignatureAlgorithm) (*bcgo.Record, error) {
@@ -381,38 +388,36 @@ func CreateAliasRecord(alias string, publicKey []byte, publicKeyFormat cryptogo.
 	return record, nil
 }
 
-func RegisterAlias(host, alias string, key *rsa.PrivateKey) error {
+func RegisterAlias(host string, account bcgo.Account) error {
+	alias := account.Alias()
 	if err := ValidateAlias(alias); err != nil {
 		return err
 	}
 
-	publicKeyBytes, err := cryptogo.RSAPublicKeyToPKIXBytes(&key.PublicKey)
+	publicKey, publicKeyFormat, err := account.PublicKey()
 	if err != nil {
 		return err
 	}
 
 	data, err := proto.Marshal(&Alias{
 		Alias:        alias,
-		PublicKey:    publicKeyBytes,
-		PublicFormat: cryptogo.PublicKeyFormat_PKIX,
+		PublicKey:    publicKey,
+		PublicFormat: publicKeyFormat,
 	})
 	if err != nil {
 		return err
 	}
-
-	signatureAlgorithm := cryptogo.SignatureAlgorithm_SHA512WITHRSA_PSS
-
-	signature, err := cryptogo.CreateSignature(key, cryptogo.Hash(data), signatureAlgorithm)
+	signature, algorithm, err := account.Sign(data)
 	if err != nil {
 		return err
 	}
 
 	response, err := http.PostForm(host+"/alias-register", url.Values{
 		"alias":              {alias},
-		"publicKey":          {base64.RawURLEncoding.EncodeToString(publicKeyBytes)},
-		"publicKeyFormat":    {"PKIX"},
+		"publicKey":          {base64.RawURLEncoding.EncodeToString(publicKey)},
+		"publicKeyFormat":    {publicKeyFormat.String()},
 		"signature":          {base64.RawURLEncoding.EncodeToString(signature)},
-		"signatureAlgorithm": {signatureAlgorithm.String()},
+		"signatureAlgorithm": {algorithm.String()},
 	})
 	if err != nil {
 		return err

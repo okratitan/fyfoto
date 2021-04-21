@@ -30,7 +30,7 @@ import (
 type BlockView struct {
 	widget.Form
 	ui        UI
-	client    *bcclientgo.BCClient
+	client    bcclientgo.BCClient
 	hash      *widget.Label
 	timestamp *TimestampLabel
 	channel   *Link
@@ -41,7 +41,7 @@ type BlockView struct {
 	record    *fyne.Container
 }
 
-func NewBlockView(ui UI, client *bcclientgo.BCClient) *BlockView {
+func NewBlockView(ui UI, client bcclientgo.BCClient) *BlockView {
 	v := &BlockView{
 		ui:     ui,
 		client: client,
@@ -110,17 +110,17 @@ func NewBlockView(ui UI, client *bcclientgo.BCClient) *BlockView {
 }
 
 func (v *BlockView) SetURI(uri storage.BlockURI) error {
-	cache, err := v.client.GetCache()
+	cache, err := v.client.Cache()
 	if err != nil {
 		return err
 	}
-	network, err := v.client.GetNetwork()
+	network, err := v.client.Network()
 	if err != nil {
 		return err
 	}
 	name := uri.Channel()
 	hash := uri.BlockHash()
-	block, err := bcgo.GetBlock(name, cache, network, hash)
+	block, err := bcgo.LoadBlock(name, cache, network, hash)
 	if err != nil {
 		return err
 	}

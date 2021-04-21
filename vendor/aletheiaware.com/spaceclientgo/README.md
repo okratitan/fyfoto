@@ -15,9 +15,7 @@ This is a Go implementation of a S P A C E client - secure, private, storage.
 
 Install the binary (or download from https://github.com/AletheiaWareLLC/spaceclientgo/releases/latest)
 
-```
-go install -tags release aletheiaware.com/spaceclientgo/cmd/space
-```
+    go install -tags release aletheiaware.com/spaceclientgo/cmd/space
 
 # Usage
 

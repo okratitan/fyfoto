@@ -15,9 +15,8 @@ This is a Go implementation of a BC client using the BC data structures.
 
 Install the binary (or download from https://github.com/AletheiaWareLLC/bcclientgo/releases/latest)
 
-```
-go install -tags release aletheiaware.com/bcclientgo/cmd/bc
-```
+
+    go install -tags release aletheiaware.com/bcclientgo/cmd/bc
 
 # Usage
 

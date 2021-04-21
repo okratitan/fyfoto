@@ -22,14 +22,14 @@ type ProgressMiningListener struct {
 	Func func(f float64)
 }
 
-func (p *ProgressMiningListener) OnMiningStarted(channel *bcgo.Channel, size uint64) {
+func (p *ProgressMiningListener) OnMiningStarted(channel bcgo.Channel, size uint64) {
 	p.Func(0.0)
 }
 
-func (p *ProgressMiningListener) OnNewMaxOnes(channel *bcgo.Channel, nonce, ones uint64) {
+func (p *ProgressMiningListener) OnNewMaxOnes(channel bcgo.Channel, nonce, ones uint64) {
 	p.Func(float64(ones) / 512.0)
 }
 
-func (p *ProgressMiningListener) OnMiningThresholdReached(channel *bcgo.Channel, hash []byte, block *bcgo.Block) {
+func (p *ProgressMiningListener) OnMiningThresholdReached(channel bcgo.Channel, hash []byte, block *bcgo.Block) {
 	p.Func(1.0)
 }

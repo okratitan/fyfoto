@@ -26,16 +26,16 @@ type PrintingMiningListener struct {
 	Output io.Writer
 }
 
-func (p *PrintingMiningListener) OnMiningStarted(channel *Channel, size uint64) {
-	fmt.Fprintf(p.Output, "Mining %s %s\n", channel.Name, BinarySizeToString(size))
+func (p *PrintingMiningListener) OnMiningStarted(channel Channel, size uint64) {
+	fmt.Fprintf(p.Output, "Mining %s %s\n", channel.Name(), BinarySizeToString(size))
 }
 
-func (p *PrintingMiningListener) OnNewMaxOnes(channel *Channel, nonce, ones uint64) {
-	fmt.Fprintf(p.Output, "Mining %s %d %d/512\n", channel.Name, nonce, ones)
+func (p *PrintingMiningListener) OnNewMaxOnes(channel Channel, nonce, ones uint64) {
+	fmt.Fprintf(p.Output, "Mining %s %d %d/512\n", channel.Name(), nonce, ones)
 }
 
-func (p *PrintingMiningListener) OnMiningThresholdReached(channel *Channel, hash []byte, block *Block) {
-	fmt.Fprintf(p.Output, "Mined %s %s %s\n", channel.Name, TimestampToString(block.Timestamp), base64.RawURLEncoding.EncodeToString(hash))
+func (p *PrintingMiningListener) OnMiningThresholdReached(channel Channel, hash []byte, block *Block) {
+	fmt.Fprintf(p.Output, "Mined %s %s %s\n", channel.Name(), TimestampToString(block.Timestamp), base64.RawURLEncoding.EncodeToString(hash))
 }
 
 /*

@@ -27,7 +27,6 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/crypto/ssh/terminal"
@@ -50,16 +49,6 @@ const (
 	AES_256_KEY_SIZE_BYTES = AES_256_KEY_SIZE_BITS / 8
 
 	MIN_PASSWORD = 12
-
-	ERROR_EXPORT                         = "Export error: %d %s"
-	ERROR_PASSWORD_TOO_SHORT             = "Password Too Short: %d Minimum: %d"
-	ERROR_PASSWORDS_DO_NOT_MATCH         = "Passwords Do Not Match"
-	ERROR_UNSUPPORTED_ENCRYPTION         = "Unsupported encryption: %s"
-	ERROR_UNSUPPORTED_PUBLIC_KEY_TYPE    = "Unsupported Public Key Type: %s"
-	ERROR_UNSUPPORTED_PRIVATE_KEY_TYPE   = "Unsupported Private Key Type: %s"
-	ERROR_UNSUPPORTED_PUBLIC_KEY_FORMAT  = "Unsupported Public Key Format: %s"
-	ERROR_UNSUPPORTED_PRIVATE_KEY_FORMAT = "Unsupported Private Key Format: %s"
-	ERROR_UNSUPPORTED_SIGNATURE          = "Unsupported Signature Algorithm: %s"
 
 	privateKeyFileExtension = ".go.private"
 )
@@ -119,7 +108,7 @@ func PublicKeyToRSAPublicKey(key interface{}) (*rsa.PublicKey, error) {
 	case *rsa.PublicKey:
 		return k, nil
 	default:
-		return nil, fmt.Errorf(ERROR_UNSUPPORTED_PUBLIC_KEY_TYPE, k)
+		return nil, ErrUnsupportedPublicKeyType{Type: fmt.Sprintf("%v", k)}
 	}
 }
 
@@ -170,7 +159,7 @@ func PrivateKeyToRSAPrivateKey(key interface{}) (*rsa.PrivateKey, error) {
 	case *rsa.PrivateKey:
 		return k, nil
 	default:
-		return nil, fmt.Errorf(ERROR_UNSUPPORTED_PRIVATE_KEY_TYPE, k)
+		return nil, ErrUnsupportedPrivateKeyType{Type: fmt.Sprintf("%v", k)}
 	}
 }
 
@@ -194,7 +183,7 @@ func ParseRSAPublicKey(publicKey []byte, format PublicKeyFormat) (*rsa.PublicKey
 	case PublicKeyFormat_UNKNOWN_PUBLIC_KEY_FORMAT:
 		fallthrough
 	default:
-		return nil, fmt.Errorf(ERROR_UNSUPPORTED_PUBLIC_KEY_FORMAT, format.String())
+		return nil, ErrUnsupportedPublicKeyFormat{Format: format.String()}
 	}
 }
 
@@ -207,7 +196,7 @@ func ParseRSAPrivateKey(privateKey []byte, format PrivateKeyFormat) (*rsa.Privat
 	case PrivateKeyFormat_UNKNOWN_PRIVATE_KEY_FORMAT:
 		fallthrough
 	default:
-		return nil, fmt.Errorf(ERROR_UNSUPPORTED_PRIVATE_KEY_FORMAT, format.String())
+		return nil, ErrUnsupportedPrivateKeyFormat{Format: format.String()}
 	}
 }
 
@@ -270,7 +259,7 @@ func WriteRSAPrivateKey(privateKey *rsa.PrivateKey, directory, name string, pass
 	return nil
 }
 
-func GetRSAPrivateKey(directory, name string, password []byte) (*rsa.PrivateKey, error) {
+func RSAPrivateKey(directory, name string, password []byte) (*rsa.PrivateKey, error) {
 	privateKeyPEM, err := ReadPEM(path.Join(directory, name+privateKeyFileExtension))
 	if err != nil {
 		return nil, err
@@ -288,12 +277,12 @@ func GetRSAPrivateKey(directory, name string, password []byte) (*rsa.PrivateKey,
 	return PrivateKeyToRSAPrivateKey(priv)
 }
 
-func GetPassword() ([]byte, error) {
+func Password() ([]byte, error) {
 	pwd, ok := os.LookupEnv("PASSWORD")
 	if ok {
 		return []byte(pwd), nil
 	} else {
-		return ReadPassword("Enter keystore password: ")
+		return ReadPassword("Enter password: ")
 	}
 }
 
@@ -307,28 +296,29 @@ func ReadPassword(prompt string) ([]byte, error) {
 	return password, nil
 }
 
-func GetOrCreateRSAPrivateKey(directory, name string) (*rsa.PrivateKey, error) {
-	password, err := GetPassword()
+func LoadRSAPrivateKey(directory, name string) (*rsa.PrivateKey, error) {
+	log.Println("Alias:", name)
+	password, err := Password()
 	if err != nil {
 		return nil, err
 	}
 	if HasRSAPrivateKey(directory, name) {
-		key, err := GetRSAPrivateKey(directory, name, password)
+		key, err := RSAPrivateKey(directory, name, password)
 		if err != nil {
 			return nil, err
 		}
 
 		return key, nil
 	} else {
-		log.Println("Creating keystore under " + directory + " for " + name)
+		log.Println("Creating key in " + directory + " for " + name)
 
-		confirm, err := ReadPassword("Confirm keystore password: ")
+		confirm, err := ReadPassword("Confirm password: ")
 		if err != nil {
 			return nil, err
 		}
 
 		if !bytes.Equal(password, confirm) {
-			return nil, errors.New(ERROR_PASSWORDS_DO_NOT_MATCH)
+			return nil, ErrPasswordsDoNotMatch{}
 		}
 
 		key, err := CreateRSAPrivateKey(directory, name, password)
@@ -342,7 +332,7 @@ func GetOrCreateRSAPrivateKey(directory, name string) (*rsa.PrivateKey, error) {
 }
 
 func ExportKeys(host, keystore, name string, password []byte) (string, error) {
-	privateKey, err := GetRSAPrivateKey(keystore, name, password)
+	privateKey, err := RSAPrivateKey(keystore, name, password)
 	if err != nil {
 		return "", err
 	}
@@ -385,7 +375,7 @@ func ExportKeys(host, keystore, name string, password []byte) (string, error) {
 		log.Println("Keys exported")
 		return base64.RawURLEncoding.EncodeToString(accessCode), nil
 	default:
-		return "", fmt.Errorf(ERROR_EXPORT, response.StatusCode, response.Status)
+		return "", ErrExportFailed{StatusCode: response.StatusCode, Status: response.Status}
 	}
 }
 
@@ -397,6 +387,9 @@ func ImportKeys(host, keystore, name, accessCode string) error {
 	data, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return err
+	}
+	if len(data) <= 0 {
+		return fmt.Errorf("Could not get KeyShare for %s", name)
 	}
 	keyShare := &KeyShare{}
 	if err = proto.Unmarshal(data, keyShare); err != nil {
@@ -441,7 +434,7 @@ func DecryptKey(algorithm EncryptionAlgorithm, secret []byte, key *rsa.PrivateKe
 	case EncryptionAlgorithm_UNKNOWN_ENCRYPTION:
 		return secret, nil
 	default:
-		return nil, fmt.Errorf(ERROR_UNSUPPORTED_ENCRYPTION, algorithm.String())
+		return nil, ErrUnsupportedEncryption{Algorithm: algorithm.String()}
 	}
 }
 
@@ -454,7 +447,7 @@ func DecryptPayload(algorithm EncryptionAlgorithm, key []byte, payload []byte) (
 	case EncryptionAlgorithm_UNKNOWN_ENCRYPTION:
 		return payload, nil
 	default:
-		return nil, fmt.Errorf(ERROR_UNSUPPORTED_ENCRYPTION, algorithm.String())
+		return nil, ErrUnsupportedEncryption{Algorithm: algorithm.String()}
 	}
 }
 
@@ -524,7 +517,7 @@ func CreateSignature(privateKey *rsa.PrivateKey, data []byte, algorithm Signatur
 	case SignatureAlgorithm_UNKNOWN_SIGNATURE:
 		fallthrough
 	default:
-		return nil, fmt.Errorf(ERROR_UNSUPPORTED_SIGNATURE, algorithm)
+		return nil, ErrUnsupportedSignature{Algorithm: algorithm.String()}
 	}
 }
 
@@ -539,7 +532,7 @@ func VerifySignature(publicKey *rsa.PublicKey, data, signature []byte, algorithm
 	case SignatureAlgorithm_UNKNOWN_SIGNATURE:
 		fallthrough
 	default:
-		return fmt.Errorf(ERROR_UNSUPPORTED_SIGNATURE, algorithm)
+		return ErrUnsupportedSignature{Algorithm: algorithm.String()}
 	}
 }
 

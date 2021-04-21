@@ -40,76 +40,76 @@ type BCRepository interface {
 	Register()
 }
 
-type bcrepo struct {
-	client *bcclientgo.BCClient
+type bcRepository struct {
+	client bcclientgo.BCClient
 }
 
-func NewBCRepository(client *bcclientgo.BCClient) BCRepository {
-	return &bcrepo{
+func NewBCRepository(client bcclientgo.BCClient) BCRepository {
+	return &bcRepository{
 		client: client,
 	}
 }
 
-func (r *bcrepo) CanList(u fyne.URI) (bool, error) {
+func (r *bcRepository) CanList(u fyne.URI) (bool, error) {
 	// TODO
 	return false, fmt.Errorf("%s: Not Yet Implemented", "BCRepository.CanList")
 }
 
-func (r *bcrepo) CanRead(u fyne.URI) (bool, error) {
+func (r *bcRepository) CanRead(u fyne.URI) (bool, error) {
 	// TODO
 	return false, fmt.Errorf("%s: Not Yet Implemented", "BCRepository.CanRead")
 }
 
-func (r *bcrepo) CanWrite(u fyne.URI) (bool, error) {
+func (r *bcRepository) CanWrite(u fyne.URI) (bool, error) {
 	// TODO
 	return false, fmt.Errorf("%s: Not Yet Implemented", "BCRepository.CanWrite")
 }
 
-func (r *bcrepo) Child(fyne.URI, string) (fyne.URI, error) {
+func (r *bcRepository) Child(fyne.URI, string) (fyne.URI, error) {
 	// TODO
 	return nil, fmt.Errorf("%s: Not Yet Implemented", "BCRepository.Child")
 }
 
-func (r *bcrepo) Copy(fyne.URI, fyne.URI) error {
+func (r *bcRepository) Copy(fyne.URI, fyne.URI) error {
 	// TODO
 	return fmt.Errorf("%s: Not Yet Implemented", "BCRepository.Copy")
 }
 
-func (r *bcrepo) CreateListable(u fyne.URI) error {
+func (r *bcRepository) CreateListable(u fyne.URI) error {
 	// TODO
 	return fmt.Errorf("%s: Not Yet Implemented", "BCRepository.CreateListable")
 }
 
-func (r *bcrepo) Delete(u fyne.URI) error {
+func (r *bcRepository) Delete(u fyne.URI) error {
 	// BC is indelible
 	return repository.ErrOperationNotSupported
 }
 
-func (r *bcrepo) Destroy(string) {
+func (r *bcRepository) Destroy(string) {
 	// Do nothing
 }
 
-func (r *bcrepo) Exists(u fyne.URI) (bool, error) {
+func (r *bcRepository) Exists(u fyne.URI) (bool, error) {
 	// TODO
 	return false, fmt.Errorf("%s: Not Yet Implemented", "BCRepository.Exists")
 }
 
-func (r *bcrepo) List(u fyne.URI) ([]fyne.URI, error) {
+func (r *bcRepository) List(u fyne.URI) ([]fyne.URI, error) {
 	// TODO
 	return nil, fmt.Errorf("%s: Not Yet Implemented", "BCRepository.List")
 }
 
-func (r *bcrepo) Move(fyne.URI, fyne.URI) error {
+func (r *bcRepository) Move(fyne.URI, fyne.URI) error {
 	// BC is immutable
 	return repository.ErrOperationNotSupported
 }
 
-func (r *bcrepo) Parent(fyne.URI) (fyne.URI, error) {
+func (r *bcRepository) Parent(fyne.URI) (fyne.URI, error) {
 	// TODO
 	return nil, fmt.Errorf("%s: Not Yet Implemented", "BCRepository.Parent")
 }
 
-func (r *bcrepo) ParseURI(s string) (fyne.URI, error) {
+func (r *bcRepository) ParseURI(s string) (fyne.URI, error) {
 	if strings.HasPrefix(s, ALIAS_SCHEME_PREFIX) {
 		return NewAliasURI(strings.TrimPrefix(s, ALIAS_SCHEME_PREFIX)), nil
 	}
@@ -149,16 +149,16 @@ func (r *bcrepo) ParseURI(s string) (fyne.URI, error) {
 	return NewChannelURI(channel), nil
 }
 
-func (r *bcrepo) Reader(u fyne.URI) (fyne.URIReadCloser, error) {
+func (r *bcRepository) Reader(u fyne.URI) (fyne.URIReadCloser, error) {
 	// TODO
 	return nil, fmt.Errorf("%s: Not Yet Implemented", "BCRepository.Reader")
 }
 
-func (r *bcrepo) Register() {
+func (r *bcRepository) Register() {
 	repository.Register(BC_SCHEME, r)
 }
 
-func (r *bcrepo) Writer(u fyne.URI) (fyne.URIWriteCloser, error) {
+func (r *bcRepository) Writer(u fyne.URI) (fyne.URIWriteCloser, error) {
 	// TODO
 	return nil, fmt.Errorf("%s: Not Yet Implemented", "BCRepository.Writer")
 }
