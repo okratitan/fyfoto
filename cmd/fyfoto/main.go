@@ -57,7 +57,7 @@ func main() {
 	flag.Parse()
 
 	ff := &FyFoto{
-		app:         app.New(),
+		app:         app.NewWithID("us.smhouston.fyfoto"),
 		spaceClient: spaceclientgo.NewSpaceClient(),
 	}
 	ff.rootDir = storage.NewFileURI(*dirPtr)
