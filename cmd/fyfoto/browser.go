@@ -51,7 +51,7 @@ func populateLocal(ff *FyFoto, dir fyne.URI) {
 
 func populateSpace(ff *FyFoto) {
 	// Get BC Node
-	node, err := ff.spaceFyne.GetNode(&ff.spaceClient.BCClient)
+	node, err := ff.spaceFyne.Node(ff.spaceClient)
 	if err != nil {
 		ff.spaceFyne.ShowError(err)
 		return
@@ -59,7 +59,7 @@ func populateSpace(ff *FyFoto) {
 	populateSpaceWithNode(ff, node)
 }
 
-func populateSpaceWithNode(ff *FyFoto, node *bcgo.Node) {
+func populateSpaceWithNode(ff *FyFoto, node bcgo.Node) {
 	// TODO Should this show a Progress Bar?
 
 	/* TODO this API was removed in Fyne v2.0.0
@@ -140,7 +140,7 @@ func createBrowser(ff *FyFoto) {
 	ff.spaceToolbar = widget.NewToolbar(
 		widget.NewToolbarAction(theme.ContentAddIcon(), func() {
 			go func() {
-				node, err := ff.spaceFyne.GetNode(&ff.spaceClient.BCClient)
+				node, err := ff.spaceFyne.Node(ff.spaceClient)
 				if err != nil {
 					ff.spaceFyne.ShowError(err)
 					return
@@ -156,18 +156,22 @@ func createBrowser(ff *FyFoto) {
 					name := reader.URI().Name()
 
 					// Show progress dialog
-					progress := dialog.NewProgress("Uploading", "Uploading "+name, ff.spaceFyne.Window)
+					progress := dialog.NewProgress("Uploading", "Uploading "+name, ff.spaceFyne.Window())
 					progress.Show()
-					defer progress.Hide()
 					listener := &bcui.ProgressMiningListener{Func: progress.SetValue}
 
 					reference, err := ff.spaceClient.Add(node, listener, name, reader.URI().MimeType(), reader)
+
+					// Hide progress dialog
+					progress.Hide()
+
 					if err != nil {
 						ff.spaceFyne.ShowError(err)
+						return
 					}
 					fmt.Println("Uploaded:", reference)
 					go populateSpaceWithNode(ff, node)
-				}, ff.spaceFyne.Window)
+				}, ff.spaceFyne.Window())
 				d.SetFilter(storage.NewMimeTypeFileFilter([]string{"image/*"}))
 				d.Show()
 			}()
@@ -183,7 +187,7 @@ func createBrowser(ff *FyFoto) {
 			go ff.spaceFyne.ShowStorage(ff.spaceClient)
 		}),
 		widget.NewToolbarAction(theme.NewThemedResource(bcuidata.AccountIcon), func() {
-			go ff.spaceFyne.ShowAccount(&ff.spaceClient.BCClient)
+			go ff.spaceFyne.ShowAccount(ff.spaceClient)
 		}),
 		widget.NewToolbarAction(theme.HelpIcon(), func() {
 			go ff.spaceFyne.ShowHelp(ff.spaceClient)
@@ -194,7 +198,7 @@ func createBrowser(ff *FyFoto) {
 	)
 	// Create list of thumbnails
 	ff.spaceImages = ui.NewSpaceThumbnailTable(ff.spaceClient, func(id string, timestamp uint64, meta *spacego.Meta) {
-		node, err := ff.spaceFyne.GetNode(&ff.spaceClient.BCClient)
+		node, err := ff.spaceFyne.Node(ff.spaceClient)
 		if err != nil {
 			ff.spaceFyne.ShowError(err)
 			return
@@ -208,7 +212,7 @@ func createBrowser(ff *FyFoto) {
 
 		file := filepath.Join(c, id)
 		if _, err := os.Stat(file); os.IsNotExist(err) {
-			progress := dialog.NewProgressInfinite("Downloading", "Downloading "+meta.Name, ff.spaceFyne.Window)
+			progress := dialog.NewProgressInfinite("Downloading", "Downloading "+meta.Name, ff.spaceFyne.Window())
 			progress.Show()
 			defer progress.Hide()
 
