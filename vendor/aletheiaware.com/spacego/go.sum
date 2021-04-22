@@ -1,11 +1,11 @@
-aletheiaware.com/aliasgo v1.2.1 h1:uPxvc3wlIRdY0HsqR7a95VQ90hs8N2jQitAgFFLB78U=
-aletheiaware.com/aliasgo v1.2.1/go.mod h1:uJ361/sEEjEGpBVuzWYRBvsvdW1skItj8dNBb6LBlKY=
-aletheiaware.com/bcgo v1.2.1 h1:TfsGFj6Snkz/9Pb3gIkxO1h+zMbaQXNmoeZq52sHWkM=
-aletheiaware.com/bcgo v1.2.1/go.mod h1:PAsjt1L4n+rzYCNvEIQC6seHY4OIFtgfWv2l+kG90HA=
+aletheiaware.com/aliasgo v1.2.2 h1:uBeZOn7Y9Y1IYKNlYpf0Uvrtlo/dNkZ9JWOplGiXnhk=
+aletheiaware.com/aliasgo v1.2.2/go.mod h1:vbYZ99/yKssYCMNM006tDqhAAJVzPO6xU3MDcBZ7aJE=
+aletheiaware.com/bcgo v1.2.2 h1:Hr6nZ+rylnTxdEKSefkfBpR/V7DrxvWckGWpNLFMw68=
+aletheiaware.com/bcgo v1.2.2/go.mod h1:PAsjt1L4n+rzYCNvEIQC6seHY4OIFtgfWv2l+kG90HA=
 aletheiaware.com/cryptogo v1.2.1 h1:qnJ2ktqDUkRWc44eVF3xj6T48OcOVl9JG2KBEcjzUKk=
 aletheiaware.com/cryptogo v1.2.1/go.mod h1:B1mJVIsfEDJoovkD2fLsZXgXxR1AAe2cDmjFwt7Eau4=
-aletheiaware.com/financego v1.2.1 h1:yXeXCfj5gjlA32rtpeCQV861tj14DgKWKtxjwxV/zoc=
-aletheiaware.com/financego v1.2.1/go.mod h1:d6PUEl6pSz4g4E3YfouDtNLZJmnVcyZSTb0YvpnuE4M=
+aletheiaware.com/financego v1.2.2 h1:pcQKpaq5pxWA1vqWYo3WmZ4n0aOBKBlBxfKQRe2hfas=
+aletheiaware.com/financego v1.2.2/go.mod h1:JqxzT5WjiSIZCexRtMvLGaneEhmS9142FOqEfLqZeMY=
 aletheiaware.com/testinggo v1.2.1 h1:22ADUTldQV3TTHOxml0QSPjU4G/aMqyvk5x3Yuk4OHE=
 aletheiaware.com/testinggo v1.2.1/go.mod h1:Xlq3xa4aQaKv7MFZVgBwJNtpJ/3huC14OHKYkPGnaSM=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=

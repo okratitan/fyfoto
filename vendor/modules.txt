@@ -1,14 +1,14 @@
-# aletheiaware.com/aliasgo v1.2.1
+# aletheiaware.com/aliasgo v1.2.2
 aletheiaware.com/aliasgo
-# aletheiaware.com/bcclientgo v1.2.1
+# aletheiaware.com/bcclientgo v1.2.2
 aletheiaware.com/bcclientgo
-# aletheiaware.com/bcfynego v1.2.1
+# aletheiaware.com/bcfynego v1.2.2
 aletheiaware.com/bcfynego
 aletheiaware.com/bcfynego/storage
 aletheiaware.com/bcfynego/ui
 aletheiaware.com/bcfynego/ui/account
 aletheiaware.com/bcfynego/ui/data
-# aletheiaware.com/bcgo v1.2.1
+# aletheiaware.com/bcgo v1.2.2
 aletheiaware.com/bcgo
 aletheiaware.com/bcgo/account
 aletheiaware.com/bcgo/cache
@@ -19,17 +19,17 @@ aletheiaware.com/bcgo/node
 aletheiaware.com/bcgo/validation
 # aletheiaware.com/cryptogo v1.2.1
 aletheiaware.com/cryptogo
-# aletheiaware.com/financego v1.2.1
+# aletheiaware.com/financego v1.2.2
 aletheiaware.com/financego
-# aletheiaware.com/spaceclientgo v1.2.1
+# aletheiaware.com/spaceclientgo v1.2.2
 aletheiaware.com/spaceclientgo
-# aletheiaware.com/spacefynego v1.2.2
+# aletheiaware.com/spacefynego v1.2.3
 aletheiaware.com/spacefynego
 aletheiaware.com/spacefynego/storage
 aletheiaware.com/spacefynego/ui
 aletheiaware.com/spacefynego/ui/data
 aletheiaware.com/spacefynego/ui/viewer
-# aletheiaware.com/spacego v1.2.1
+# aletheiaware.com/spacego v1.2.2
 aletheiaware.com/spacego
 # fyne.io/fyne/v2 v2.0.2
 fyne.io/fyne/v2

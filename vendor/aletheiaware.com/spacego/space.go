@@ -20,6 +20,7 @@ import (
 	"aletheiaware.com/bcgo"
 	"aletheiaware.com/bcgo/channel"
 	"aletheiaware.com/bcgo/validation"
+	"aletheiaware.com/cryptogo"
 	"aletheiaware.com/financego"
 	"github.com/golang/protobuf/proto"
 	"io"
@@ -459,16 +460,20 @@ func IterateDeltas(node bcgo.Node, deltas bcgo.Channel, callback DeltaCallback) 
 		for _, entry := range block.Entry {
 			for _, access := range entry.Record.Access {
 				if alias == access.Alias {
-					if err := account.Decrypt(entry, access, func(entry *bcgo.BlockEntry, key []byte, data []byte) error {
-						// Unmarshal as Delta
-						d := &Delta{}
-						if err := proto.Unmarshal(data, d); err != nil {
-							return err
-						}
-						return callback(entry, d)
-					}); err != nil {
+					decryptedKey, err := account.DecryptKey(access.EncryptionAlgorithm, access.SecretKey)
+					if err != nil {
 						return err
 					}
+					decryptedPayload, err := cryptogo.DecryptPayload(entry.Record.EncryptionAlgorithm, decryptedKey, entry.Record.Payload)
+					if err != nil {
+						return err
+					}
+					// Unmarshal as Delta
+					d := &Delta{}
+					if err := proto.Unmarshal(decryptedPayload, d); err != nil {
+						return err
+					}
+					return callback(entry, d)
 				}
 			}
 		}

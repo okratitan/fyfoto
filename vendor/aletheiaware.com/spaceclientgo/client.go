@@ -31,7 +31,6 @@ import (
 
 type SpaceClient interface {
 	bcclientgo.BCClient
-	Init(bcgo.MiningListener) (bcgo.Node, error)
 
 	Add(bcgo.Node, bcgo.MiningListener, string, string, io.Reader) (*bcgo.Reference, error)
 	Append(bcgo.Node, bcgo.MiningListener, bcgo.Channel, *spacego.Delta) error
@@ -41,12 +40,14 @@ type SpaceClient interface {
 
 	/*
 		AddPreview(bcgo.Node, bcgo.MiningListener, []byte, []string) ([]*bcgo.Reference, error)
-		Previews(bcgo.Node, []byte, spacego.PreviewCallback) error
+		AllPreviewsForHash(bcgo.Node, []byte, spacego.PreviewCallback) error
 	*/
 
 	AddTag(bcgo.Node, bcgo.MiningListener, []byte, []string) ([]*bcgo.Reference, error)
 	AllTagsForHash(bcgo.Node, []byte, spacego.TagCallback) error
-	Search(bcgo.Node, []string, spacego.MetaCallback) error
+
+	SearchMeta(bcgo.Node, spacego.MetaFilter, spacego.MetaCallback) error
+	SearchTag(bcgo.Node, spacego.TagFilter, spacego.MetaCallback) error
 
 	Registration(string, financego.RegistrationCallback) error
 	Subscription(string, financego.SubscriptionCallback) error
@@ -66,27 +67,6 @@ func NewSpaceClient(peers ...string) SpaceClient {
 	return &spaceClient{
 		BCClient: bcclientgo.NewBCClient(peers...),
 	}
-}
-
-func (c *spaceClient) Init(listener bcgo.MiningListener) (bcgo.Node, error) {
-	root, err := c.Root()
-	if err != nil {
-		return nil, err
-	}
-
-	// Add Space hosts to peers
-	for _, host := range spacego.SpaceHosts() {
-		if err := bcgo.AddPeer(root, host); err != nil {
-			return nil, err
-		}
-	}
-
-	// Add BC host to peers
-	if err := bcgo.AddPeer(root, bcgo.BCHost()); err != nil {
-		return nil, err
-	}
-
-	return c.BCClient.Init(listener)
 }
 
 // Adds file
@@ -244,30 +224,39 @@ func (c *spaceClient) ReadFile(node bcgo.Node, metaId []byte) (io.Reader, error)
 	return bytes.NewReader(buffer), nil
 }
 
-// Search files owned by key
-func (c *spaceClient) Search(node bcgo.Node, terms []string, callback spacego.MetaCallback) error {
+// SearchMeta searches files by metadata
+func (c *spaceClient) SearchMeta(node bcgo.Node, filter spacego.MetaFilter, callback spacego.MetaCallback) error {
 	account := node.Account()
 	metas := spacego.OpenMetaChannel(account.Alias())
 	if err := metas.Refresh(node.Cache(), node.Network()); err != nil {
 		log.Println(err)
 	}
 	if err := spacego.ReadMeta(metas, node.Cache(), node.Network(), account, nil, func(metaEntry *bcgo.BlockEntry, meta *spacego.Meta) error {
-		tags := spacego.OpenTagChannel(base64.RawURLEncoding.EncodeToString(metaEntry.RecordHash))
-		if err := tags.Refresh(node.Cache(), node.Network()); err != nil {
-			log.Println(err)
-		}
-		return spacego.ReadTag(tags, node.Cache(), node.Network(), account, nil, func(tagEntry *bcgo.BlockEntry, tag *spacego.Tag) error {
-			for _, value := range terms {
-				if tag.Value == value {
-					return callback(metaEntry, meta)
-				}
-			}
+		if filter != nil && !filter.Filter(meta) {
+			// Meta doesn't pass filter
 			return nil
-		})
+		}
+		return callback(metaEntry, meta)
 	}); err != nil {
 		return err
 	}
 	return nil
+}
+
+// SearchTag searches files by tag
+func (c *spaceClient) SearchTag(node bcgo.Node, filter spacego.TagFilter, callback spacego.MetaCallback) error {
+	return c.SearchMeta(node, nil, func(metaEntry *bcgo.BlockEntry, meta *spacego.Meta) error {
+		tags := spacego.OpenTagChannel(base64.RawURLEncoding.EncodeToString(metaEntry.RecordHash))
+		if err := tags.Refresh(node.Cache(), node.Network()); err != nil {
+			log.Println(err)
+		}
+		return spacego.ReadTag(tags, node.Cache(), node.Network(), node.Account(), nil, func(tagEntry *bcgo.BlockEntry, tag *spacego.Tag) error {
+			if filter != nil && !filter.Filter(tag) {
+				return nil
+			}
+			return callback(metaEntry, meta)
+		})
+	})
 }
 
 // AddTag adds the given tag for the file with the given hash

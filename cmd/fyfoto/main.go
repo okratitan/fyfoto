@@ -63,7 +63,12 @@ func main() {
 	ff.rootDir = storage.NewFileURI(*dirPtr)
 	ff.window = ff.app.NewWindow("FyFoto")
 	ff.spaceFyne = spacefynego.NewSpaceFyne(ff.app, ff.window, ff.spaceClient)
-	ff.spaceFyne.AddOnSignedIn(func(node bcgo.Node) {
+	ff.spaceFyne.AddOnSignedIn(func(bcgo.Account) {
+		node, err := ff.spaceFyne.Node(ff.spaceClient)
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		go populateSpaceWithNode(ff, node)
 	})
 	ff.spaceFyne.AddOnSignedOut(func() {

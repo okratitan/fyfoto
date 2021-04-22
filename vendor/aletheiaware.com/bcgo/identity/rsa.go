@@ -48,24 +48,12 @@ func (a *rsaIdentity) PublicKey() ([]byte, cryptogo.PublicKeyFormat, error) {
 	return bytes, cryptogo.PublicKeyFormat_PKIX, nil
 }
 
-func (a *rsaIdentity) Encrypt(data []byte) ([]byte, cryptogo.EncryptionAlgorithm, error) {
-	encrypted, err := rsa.EncryptOAEP(sha512.New(), rand.Reader, a.key, data, nil)
+func (a *rsaIdentity) EncryptKey(key []byte) ([]byte, cryptogo.EncryptionAlgorithm, error) {
+	encrypted, err := rsa.EncryptOAEP(sha512.New(), rand.Reader, a.key, key, nil)
 	if err != nil {
 		return nil, cryptogo.EncryptionAlgorithm_UNKNOWN_ENCRYPTION, err
 	}
 	return encrypted, cryptogo.EncryptionAlgorithm_RSA_ECB_OAEPPADDING, nil
-}
-
-func (a *rsaIdentity) EncryptKey(key []byte) (*bcgo.Record_Access, error) {
-	encrypted, algorithm, err := a.Encrypt(key)
-	if err != nil {
-		return nil, err
-	}
-	return &bcgo.Record_Access{
-		Alias:               a.alias,
-		SecretKey:           encrypted,
-		EncryptionAlgorithm: algorithm,
-	}, nil
 }
 
 func (a *rsaIdentity) Verify(data, signature []byte, algorithm cryptogo.SignatureAlgorithm) error {

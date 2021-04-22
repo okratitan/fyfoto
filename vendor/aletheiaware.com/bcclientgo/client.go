@@ -40,9 +40,14 @@ type BCClient interface {
 	Peers() []string
 	Cache() (bcgo.Cache, error)
 	Network() (bcgo.Network, error)
+	Account() (bcgo.Account, error)
 	Node() (bcgo.Node, error)
-	Init(bcgo.MiningListener) (bcgo.Node, error)
-	IsSignedIn() bool
+
+	HasCache() bool
+	HasNetwork() bool
+	HasAccount() bool
+	HasNode() bool
+
 	PublicKey(string) ([]byte, cryptogo.PublicKeyFormat, error)
 	Head(string) ([]byte, error)
 	Chain(string, func([]byte, *bcgo.Block) error) error
@@ -56,12 +61,15 @@ type BCClient interface {
 	Pull(string) error
 	Push(string) error
 	Purge() error
+
 	ImportKeys(string, string, string) error
 	ExportKeys(string, string, []byte) (string, error)
+
 	SetRoot(string)
 	SetPeers(...string)
 	SetCache(bcgo.Cache)
 	SetNetwork(bcgo.Network)
+	SetAccount(bcgo.Account)
 	SetNode(bcgo.Node)
 }
 
@@ -70,6 +78,7 @@ type bcClient struct {
 	peers   []string
 	cache   bcgo.Cache
 	network bcgo.Network
+	account bcgo.Account
 	node    bcgo.Node
 }
 
@@ -120,12 +129,23 @@ func (c *bcClient) Network() (bcgo.Network, error) {
 	return c.network, nil
 }
 
-func (c *bcClient) Node() (bcgo.Node, error) {
-	if !c.IsSignedIn() {
+func (c *bcClient) Account() (bcgo.Account, error) {
+	if !c.HasAccount() {
 		rootDir, err := c.Root()
 		if err != nil {
 			return nil, err
 		}
+		account, err := account.LoadRSA(rootDir)
+		if err != nil {
+			return nil, err
+		}
+		c.account = account
+	}
+	return c.account, nil
+}
+
+func (c *bcClient) Node() (bcgo.Node, error) {
+	if !c.HasNode() {
 		cache, err := c.Cache()
 		if err != nil {
 			return nil, err
@@ -134,7 +154,7 @@ func (c *bcClient) Node() (bcgo.Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		account, err := account.LoadRSA(rootDir)
+		account, err := c.Account()
 		if err != nil {
 			return nil, err
 		}
@@ -165,28 +185,27 @@ func (c *bcClient) SetNetwork(network bcgo.Network) {
 	c.network = network
 }
 
+func (c *bcClient) SetAccount(account bcgo.Account) {
+	c.account = account
+}
+
 func (c *bcClient) SetNode(node bcgo.Node) {
 	c.node = node
 }
 
-func (c *bcClient) Init(listener bcgo.MiningListener) (bcgo.Node, error) {
-	// TODO check Alias is unique
-
-	// Create Node
-	node, err := c.Node()
-	if err != nil {
-		return nil, err
-	}
-
-	// Register Alias
-	if err := aliasgo.Register(node, listener); err != nil {
-		return nil, err
-	}
-
-	return node, nil
+func (c *bcClient) HasCache() bool {
+	return c.cache != nil && !reflect.ValueOf(c.cache).IsNil()
 }
 
-func (c *bcClient) IsSignedIn() bool {
+func (c *bcClient) HasNetwork() bool {
+	return c.network != nil && !reflect.ValueOf(c.network).IsNil()
+}
+
+func (c *bcClient) HasAccount() bool {
+	return c.account != nil && !reflect.ValueOf(c.account).IsNil()
+}
+
+func (c *bcClient) HasNode() bool {
 	return c.node != nil && !reflect.ValueOf(c.node).IsNil()
 }
 
@@ -294,7 +313,7 @@ func (c *bcClient) Read(name string, blockHash, recordHash []byte, output io.Wri
 	if err != nil {
 		return err
 	}
-	node, err := c.Node()
+	account, err := c.Account()
 	if err != nil {
 		return err
 	}
@@ -309,7 +328,7 @@ func (c *bcClient) Read(name string, blockHash, recordHash []byte, output io.Wri
 		blockHash = ch.Head()
 	}
 
-	return bcgo.Read(name, blockHash, nil, cache, network, node.Account(), recordHash, func(entry *bcgo.BlockEntry, key, payload []byte) error {
+	return bcgo.Read(name, blockHash, nil, cache, network, account, recordHash, func(entry *bcgo.BlockEntry, key, payload []byte) error {
 		bcgo.PrintBlockEntry(output, "", entry)
 		return nil
 	})
@@ -324,7 +343,7 @@ func (c *bcClient) ReadKey(name string, blockHash, recordHash []byte, output io.
 	if err != nil {
 		return err
 	}
-	node, err := c.Node()
+	account, err := c.Account()
 	if err != nil {
 		return err
 	}
@@ -339,7 +358,7 @@ func (c *bcClient) ReadKey(name string, blockHash, recordHash []byte, output io.
 		blockHash = ch.Head()
 	}
 
-	return bcgo.ReadKey(name, blockHash, nil, cache, network, node.Account(), recordHash, func(key []byte) error {
+	return bcgo.ReadKey(name, blockHash, nil, cache, network, account, recordHash, func(key []byte) error {
 		output.Write(key)
 		return nil
 	})
@@ -354,7 +373,7 @@ func (c *bcClient) ReadPayload(name string, blockHash, recordHash []byte, output
 	if err != nil {
 		return err
 	}
-	node, err := c.Node()
+	account, err := c.Account()
 	if err != nil {
 		return err
 	}
@@ -369,7 +388,7 @@ func (c *bcClient) ReadPayload(name string, blockHash, recordHash []byte, output
 		blockHash = ch.Head()
 	}
 
-	return bcgo.Read(name, blockHash, nil, cache, network, node.Account(), recordHash, func(entry *bcgo.BlockEntry, key, payload []byte) error {
+	return bcgo.Read(name, blockHash, nil, cache, network, account, recordHash, func(entry *bcgo.BlockEntry, key, payload []byte) error {
 		output.Write(payload)
 		return nil
 	})
@@ -395,12 +414,12 @@ func (c *bcClient) Write(name string, accesses []string, input io.Reader) (int, 
 		access = aliasgo.PublicKeysForAliases(aliases, cache, network, accesses)
 	}
 
-	node, err := c.Node()
+	account, err := c.Account()
 	if err != nil {
 		return 0, err
 	}
 
-	size, err := bcgo.CreateRecords(node.Account(), access, nil, input, func(key []byte, record *bcgo.Record) error {
+	size, err := bcgo.CreateRecords(account, access, nil, input, func(key []byte, record *bcgo.Record) error {
 		_, err := bcgo.WriteRecord(name, cache, record)
 		return err
 	})
@@ -505,9 +524,9 @@ func (c *bcClient) ExportKeys(peer, alias string, password []byte) (string, erro
 	return cryptogo.ExportKeys(peer, keystore, alias, password)
 }
 
-func PrintNode(output io.Writer, node bcgo.Node) error {
-	fmt.Fprintln(output, node.Account().Alias())
-	bytes, format, err := node.Account().PublicKey()
+func PrintIdentity(output io.Writer, identity bcgo.Identity) error {
+	fmt.Fprintln(output, identity.Alias())
+	bytes, format, err := identity.PublicKey()
 	if err != nil {
 		return err
 	}

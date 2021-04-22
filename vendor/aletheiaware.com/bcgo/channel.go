@@ -54,9 +54,11 @@ func ReadKey(channel string, hash []byte, block *Block, cache Cache, network Net
 				} else {
 					for _, access := range entry.Record.Access {
 						if alias == "" || alias == access.Alias {
-							if err := account.DecryptKey(access, callback); err != nil {
+							decryptedKey, err := account.DecryptKey(access.EncryptionAlgorithm, access.SecretKey)
+							if err != nil {
 								return err
 							}
+							return callback(decryptedKey)
 						}
 					}
 				}
@@ -80,9 +82,15 @@ func Read(channel string, hash []byte, block *Block, cache Cache, network Networ
 				} else {
 					for _, access := range entry.Record.Access {
 						if alias == "" || alias == access.Alias {
-							if err := account.Decrypt(entry, access, callback); err != nil {
+							decryptedKey, err := account.DecryptKey(access.EncryptionAlgorithm, access.SecretKey)
+							if err != nil {
 								return err
 							}
+							decryptedPayload, err := cryptogo.DecryptPayload(entry.Record.EncryptionAlgorithm, decryptedKey, entry.Record.Payload)
+							if err != nil {
+								return err
+							}
+							return callback(entry, decryptedKey, decryptedPayload)
 						}
 					}
 				}

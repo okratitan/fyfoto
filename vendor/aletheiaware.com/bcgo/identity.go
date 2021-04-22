@@ -21,7 +21,6 @@ import "aletheiaware.com/cryptogo"
 type Identity interface {
 	Alias() string
 	PublicKey() ([]byte, cryptogo.PublicKeyFormat, error)
-	Encrypt([]byte) ([]byte, cryptogo.EncryptionAlgorithm, error)
-	EncryptKey([]byte) (*Record_Access, error)
+	EncryptKey([]byte) ([]byte, cryptogo.EncryptionAlgorithm, error)
 	Verify([]byte, []byte, cryptogo.SignatureAlgorithm) error
 }

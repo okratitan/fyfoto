@@ -14,12 +14,24 @@
  * limitations under the License.
  */
 
-package bcgo
+package ui
 
-import "aletheiaware.com/cryptogo"
+import (
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/theme"
+)
 
-type Account interface {
-	Identity
-	DecryptKey(cryptogo.EncryptionAlgorithm, []byte) ([]byte, error)
-	Sign([]byte) ([]byte, cryptogo.SignatureAlgorithm, error)
+func NewTestModeSign() fyne.CanvasObject {
+	return container.NewPadded(&canvas.Text{
+		Alignment: fyne.TextAlignCenter,
+		Color:     theme.PrimaryColorNamed(theme.ColorRed),
+		Text:      "TEST MODE",
+		TextSize:  theme.TextSize(),
+		TextStyle: fyne.TextStyle{
+			Bold:      true,
+			Monospace: true,
+		},
+	})
 }

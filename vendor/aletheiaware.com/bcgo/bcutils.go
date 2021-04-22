@@ -386,11 +386,15 @@ func CreateRecord(timestamp uint64, creator Account, access []Identity, referenc
 
 		// Grant access to each public key
 		for _, a := range access {
-			access, err := a.EncryptKey(key)
+			encrypted, algorithm, err := a.EncryptKey(key)
 			if err != nil {
 				return nil, nil, err
 			}
-			record.Access = append(record.Access, access)
+			record.Access = append(record.Access, &Record_Access{
+				Alias:               a.Alias(),
+				SecretKey:           encrypted,
+				EncryptionAlgorithm: algorithm,
+			})
 		}
 		record.EncryptionAlgorithm = cryptogo.EncryptionAlgorithm_AES_256_GCM_NOPADDING
 	} else {
