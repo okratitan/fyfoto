@@ -114,7 +114,7 @@ func AliasForKey(channel bcgo.Channel, cache bcgo.Cache, network bcgo.Network, p
 			if err != nil {
 				return err
 			}
-			pk, err := cryptogo.ParseRSAPublicKey(a.PublicKey, a.PublicFormat)
+			pk, err := cryptogo.ParseRSAPublicKey(a.PublicFormat, a.PublicKey)
 			if err != nil {
 				return err
 			}
@@ -150,7 +150,7 @@ func PublicKeyForAlias(channel bcgo.Channel, cache bcgo.Cache, network bcgo.Netw
 				return err
 			}
 			if a.Alias == alias {
-				result, err = cryptogo.ParseRSAPublicKey(a.PublicKey, a.PublicFormat)
+				result, err = cryptogo.ParseRSAPublicKey(a.PublicFormat, a.PublicKey)
 				if err != nil {
 					return err
 				}
@@ -184,7 +184,7 @@ func PublicKeysForAliases(channel bcgo.Channel, cache bcgo.Cache, network bcgo.N
 				}
 				for _, a := range aliases {
 					if alias.Alias == a {
-						publicKey, err := cryptogo.ParseRSAPublicKey(alias.PublicKey, alias.PublicFormat)
+						publicKey, err := cryptogo.ParseRSAPublicKey(alias.PublicFormat, alias.PublicKey)
 						if err != nil {
 							return err
 						}
@@ -201,7 +201,7 @@ func PublicKeysForAliases(channel bcgo.Channel, cache bcgo.Cache, network bcgo.N
 func AllPublicKeys(channel bcgo.Channel, cache bcgo.Cache, network bcgo.Network) (map[string]*rsa.PublicKey, error) {
 	aliases := make(map[string]*rsa.PublicKey)
 	if err := IterateAliases(channel, cache, network, func(e *bcgo.BlockEntry, a *Alias) error {
-		key, err := cryptogo.ParseRSAPublicKey(a.PublicKey, a.PublicFormat)
+		key, err := cryptogo.ParseRSAPublicKey(a.PublicFormat, a.PublicKey)
 		if err != nil {
 			return err
 		}
@@ -325,7 +325,7 @@ func CreateSignedAliasRecord(account bcgo.Account) (*bcgo.Record, error) {
 		return nil, err
 	}
 
-	publicKey, publicKeyFormat, err := account.PublicKey()
+	publicKeyFormat, publicKey, err := account.PublicKey()
 	if err != nil {
 		return nil, err
 	}
@@ -340,20 +340,20 @@ func CreateSignedAliasRecord(account bcgo.Account) (*bcgo.Record, error) {
 		return nil, err
 	}
 
-	signature, algorithm, err := account.Sign(data)
+	algorithm, signature, err := account.Sign(data)
 	if err != nil {
 		return nil, err
 	}
 
-	return CreateAliasRecord(alias, publicKey, publicKeyFormat, signature, algorithm)
+	return CreateAliasRecord(alias, publicKeyFormat, publicKey, algorithm, signature)
 }
 
-func CreateAliasRecord(alias string, publicKey []byte, publicKeyFormat cryptogo.PublicKeyFormat, signature []byte, signatureAlgorithm cryptogo.SignatureAlgorithm) (*bcgo.Record, error) {
+func CreateAliasRecord(alias string, publicKeyFormat cryptogo.PublicKeyFormat, publicKey []byte, signatureAlgorithm cryptogo.SignatureAlgorithm, signature []byte) (*bcgo.Record, error) {
 	if err := ValidateAlias(alias); err != nil {
 		return nil, err
 	}
 
-	pubKey, err := cryptogo.ParseRSAPublicKey(publicKey, publicKeyFormat)
+	pubKey, err := cryptogo.ParseRSAPublicKey(publicKeyFormat, publicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -368,7 +368,7 @@ func CreateAliasRecord(alias string, publicKey []byte, publicKeyFormat cryptogo.
 		return nil, err
 	}
 
-	if err := cryptogo.VerifySignature(pubKey, cryptogo.Hash(data), signature, signatureAlgorithm); err != nil {
+	if err := cryptogo.VerifySignature(signatureAlgorithm, pubKey, cryptogo.Hash(data), signature); err != nil {
 		return nil, err
 	}
 
@@ -394,7 +394,7 @@ func RegisterAlias(host string, account bcgo.Account) error {
 		return err
 	}
 
-	publicKey, publicKeyFormat, err := account.PublicKey()
+	publicKeyFormat, publicKey, err := account.PublicKey()
 	if err != nil {
 		return err
 	}
@@ -407,7 +407,7 @@ func RegisterAlias(host string, account bcgo.Account) error {
 	if err != nil {
 		return err
 	}
-	signature, algorithm, err := account.Sign(data)
+	algorithm, signature, err := account.Sign(data)
 	if err != nil {
 		return err
 	}

@@ -20,6 +20,15 @@ import "aletheiaware.com/cryptogo"
 
 type Account interface {
 	Identity
+	// Decrypt takes an Encryption Algorithm, Encrypted Payload, and Symmetric Key.
+	// The Key is used to decrypt the Payload.
+	// Decrypt returns the Decrypted Payload, or an error.
+	Decrypt(cryptogo.EncryptionAlgorithm, []byte, []byte) ([]byte, error)
+	// DecryptKey takes an Encrytion Algorithm and Encrypted Key.
+	// The Key is decrypted with this Account's Private Key.
+	// DecryptKey returns the Decrypted Key, or an error
 	DecryptKey(cryptogo.EncryptionAlgorithm, []byte) ([]byte, error)
-	Sign([]byte) ([]byte, cryptogo.SignatureAlgorithm, error)
+	// Sign takes a Payload.
+	// Sign returns the Signature, Algorithm, or an error.
+	Sign([]byte) (cryptogo.SignatureAlgorithm, []byte, error)
 }

@@ -20,7 +20,16 @@ import "aletheiaware.com/cryptogo"
 
 type Identity interface {
 	Alias() string
-	PublicKey() ([]byte, cryptogo.PublicKeyFormat, error)
-	EncryptKey([]byte) ([]byte, cryptogo.EncryptionAlgorithm, error)
-	Verify([]byte, []byte, cryptogo.SignatureAlgorithm) error
+	PublicKey() (cryptogo.PublicKeyFormat, []byte, error)
+	// Encrypt takes a Plaintext Payload
+	// A new AES 256bit Symmetric Key is generated, used to encrypt the Payload.
+	// Encrypt returns the Encryption Algorithm, Encrypted Payload, Key used, or an error.
+	Encrypt([]byte) (cryptogo.EncryptionAlgorithm, []byte, []byte, error)
+	// Encrypt takes a Plaintext key
+	// The given key is encrypted with this Identity's Public Key
+	// EncryptKey returns the Encryption Algorithm and Encrypted Key, or an error.
+	EncryptKey([]byte) (cryptogo.EncryptionAlgorithm, []byte, error)
+	// Verify takes a Signature Algorithm, Payload, and Signature.
+	// Verify returns an error if the signature cannot be verified.
+	Verify(cryptogo.SignatureAlgorithm, []byte, []byte) error
 }

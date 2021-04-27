@@ -386,7 +386,7 @@ func CreateRecord(timestamp uint64, creator Account, access []Identity, referenc
 
 		// Grant access to each public key
 		for _, a := range access {
-			encrypted, algorithm, err := a.EncryptKey(key)
+			algorithm, encrypted, err := a.EncryptKey(key)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -401,7 +401,7 @@ func CreateRecord(timestamp uint64, creator Account, access []Identity, referenc
 		record.EncryptionAlgorithm = cryptogo.EncryptionAlgorithm_UNKNOWN_ENCRYPTION
 	}
 
-	signature, algorithm, err := creator.Sign(payload)
+	algorithm, signature, err := creator.Sign(payload)
 	if err != nil {
 		return nil, nil, err
 	}

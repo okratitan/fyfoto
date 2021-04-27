@@ -86,7 +86,7 @@ func Read(channel string, hash []byte, block *Block, cache Cache, network Networ
 							if err != nil {
 								return err
 							}
-							decryptedPayload, err := cryptogo.DecryptPayload(entry.Record.EncryptionAlgorithm, decryptedKey, entry.Record.Payload)
+							decryptedPayload, err := account.Decrypt(entry.Record.EncryptionAlgorithm, entry.Record.Payload, decryptedKey)
 							if err != nil {
 								return err
 							}

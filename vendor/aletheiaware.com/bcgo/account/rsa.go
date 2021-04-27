@@ -62,21 +62,25 @@ func NewRSA(alias string, key *rsa.PrivateKey) bcgo.Account {
 	}
 }
 
+func (a *rsaAccount) Decrypt(algorithm cryptogo.EncryptionAlgorithm, payload, key []byte) ([]byte, error) {
+	return cryptogo.DecryptPayload(algorithm, payload, key)
+}
+
 func (a *rsaAccount) DecryptKey(algorithm cryptogo.EncryptionAlgorithm, key []byte) ([]byte, error) {
 	return cryptogo.DecryptKey(algorithm, key, a.key)
 }
 
-func (a *rsaAccount) Sign(data []byte) ([]byte, cryptogo.SignatureAlgorithm, error) {
+func (a *rsaAccount) Sign(data []byte) (cryptogo.SignatureAlgorithm, []byte, error) {
 	// Hash payload
 	hashed := cryptogo.Hash(data)
 
 	algorithm := cryptogo.SignatureAlgorithm_SHA512WITHRSA_PSS
 
 	// Sign hash of encrypted payload
-	signature, err := cryptogo.CreateSignature(a.key, hashed, algorithm)
+	signature, err := cryptogo.CreateSignature(algorithm, a.key, hashed)
 	if err != nil {
-		return nil, cryptogo.SignatureAlgorithm_UNKNOWN_SIGNATURE, err
+		return cryptogo.SignatureAlgorithm_UNKNOWN_SIGNATURE, nil, err
 	}
 
-	return signature, algorithm, nil
+	return algorithm, signature, nil
 }

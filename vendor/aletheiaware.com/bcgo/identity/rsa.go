@@ -40,22 +40,36 @@ func (a *rsaIdentity) Alias() string {
 	return a.alias
 }
 
-func (a *rsaIdentity) PublicKey() ([]byte, cryptogo.PublicKeyFormat, error) {
+func (a *rsaIdentity) PublicKey() (cryptogo.PublicKeyFormat, []byte, error) {
 	bytes, err := cryptogo.RSAPublicKeyToPKIXBytes(a.key)
 	if err != nil {
-		return nil, cryptogo.PublicKeyFormat_UNKNOWN_PUBLIC_KEY_FORMAT, err
+		return cryptogo.PublicKeyFormat_UNKNOWN_PUBLIC_KEY_FORMAT, nil, err
 	}
-	return bytes, cryptogo.PublicKeyFormat_PKIX, nil
+	return cryptogo.PublicKeyFormat_PKIX, bytes, nil
 }
 
-func (a *rsaIdentity) EncryptKey(key []byte) ([]byte, cryptogo.EncryptionAlgorithm, error) {
+func (a *rsaIdentity) Encrypt(payload []byte) (cryptogo.EncryptionAlgorithm, []byte, []byte, error) {
+	key, err := cryptogo.GenerateRandomKey(cryptogo.AES_256_KEY_SIZE_BYTES)
+	if err != nil {
+		return cryptogo.EncryptionAlgorithm_UNKNOWN_ENCRYPTION, nil, nil, err
+	}
+
+	encryptedPayload, err := cryptogo.EncryptAESGCM(key, payload)
+	if err != nil {
+		return cryptogo.EncryptionAlgorithm_UNKNOWN_ENCRYPTION, nil, nil, err
+	}
+
+	return cryptogo.EncryptionAlgorithm_AES_256_GCM_NOPADDING, encryptedPayload, key, nil
+}
+
+func (a *rsaIdentity) EncryptKey(key []byte) (cryptogo.EncryptionAlgorithm, []byte, error) {
 	encrypted, err := rsa.EncryptOAEP(sha512.New(), rand.Reader, a.key, key, nil)
 	if err != nil {
-		return nil, cryptogo.EncryptionAlgorithm_UNKNOWN_ENCRYPTION, err
+		return cryptogo.EncryptionAlgorithm_UNKNOWN_ENCRYPTION, nil, err
 	}
-	return encrypted, cryptogo.EncryptionAlgorithm_RSA_ECB_OAEPPADDING, nil
+	return cryptogo.EncryptionAlgorithm_RSA_ECB_OAEPPADDING, encrypted, nil
 }
 
-func (a *rsaIdentity) Verify(data, signature []byte, algorithm cryptogo.SignatureAlgorithm) error {
-	return cryptogo.VerifySignature(a.key, data, signature, algorithm)
+func (a *rsaIdentity) Verify(algorithm cryptogo.SignatureAlgorithm, data, signature []byte) error {
+	return cryptogo.VerifySignature(algorithm, a.key, data, signature)
 }

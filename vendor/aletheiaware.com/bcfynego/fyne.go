@@ -613,7 +613,7 @@ func (f *bcFyne) ShowIdentity(identity bcgo.Identity) {
 }
 
 func identityView(identity bcgo.Identity) (fyne.CanvasObject, error) {
-	bytes, format, err := identity.PublicKey()
+	format, bytes, err := identity.PublicKey()
 	if err != nil {
 		return nil, err
 	}

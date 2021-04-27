@@ -172,7 +172,7 @@ func RSAPrivateKeyToPEM(privateKey *rsa.PrivateKey, password []byte) (*pem.Block
 	return x509.EncryptPEMBlock(rand.Reader, "ENCRYPTED PRIVATE KEY", data, password, x509.PEMCipherAES128)
 }
 
-func ParseRSAPublicKey(publicKey []byte, format PublicKeyFormat) (*rsa.PublicKey, error) {
+func ParseRSAPublicKey(format PublicKeyFormat, publicKey []byte) (*rsa.PublicKey, error) {
 	switch format {
 	case PublicKeyFormat_PKCS1_PUBLIC:
 		return RSAPublicKeyFromPKCS1Bytes(publicKey)
@@ -187,7 +187,7 @@ func ParseRSAPublicKey(publicKey []byte, format PublicKeyFormat) (*rsa.PublicKey
 	}
 }
 
-func ParseRSAPrivateKey(privateKey []byte, format PrivateKeyFormat) (*rsa.PrivateKey, error) {
+func ParseRSAPrivateKey(format PrivateKeyFormat, privateKey []byte) (*rsa.PrivateKey, error) {
 	switch format {
 	case PrivateKeyFormat_PKCS1_PRIVATE:
 		return RSAPrivateKeyFromPKCS1Bytes(privateKey)
@@ -409,7 +409,7 @@ func ImportKeys(host, keystore, name, accessCode string) error {
 		return err
 	}
 	// Parse Private Key
-	privateKey, err := ParseRSAPrivateKey(decryptedPrivateKey, keyShare.PrivateFormat)
+	privateKey, err := ParseRSAPrivateKey(keyShare.PrivateFormat, decryptedPrivateKey)
 	if err != nil {
 		return err
 	}
@@ -438,7 +438,7 @@ func DecryptKey(algorithm EncryptionAlgorithm, secret []byte, key *rsa.PrivateKe
 	}
 }
 
-func DecryptPayload(algorithm EncryptionAlgorithm, key []byte, payload []byte) ([]byte, error) {
+func DecryptPayload(algorithm EncryptionAlgorithm, payload []byte, key []byte) ([]byte, error) {
 	switch algorithm {
 	case EncryptionAlgorithm_AES_128_GCM_NOPADDING:
 		fallthrough
@@ -506,7 +506,7 @@ func DecryptAESGCM(key, encrypted []byte) ([]byte, error) {
 	return gcm.Open(nil, nonce, payload, nil)
 }
 
-func CreateSignature(privateKey *rsa.PrivateKey, data []byte, algorithm SignatureAlgorithm) ([]byte, error) {
+func CreateSignature(algorithm SignatureAlgorithm, privateKey *rsa.PrivateKey, data []byte) ([]byte, error) {
 	switch algorithm {
 	case SignatureAlgorithm_SHA512WITHRSA:
 		return rsa.SignPKCS1v15(rand.Reader, privateKey, crypto.SHA512, data)
@@ -521,7 +521,7 @@ func CreateSignature(privateKey *rsa.PrivateKey, data []byte, algorithm Signatur
 	}
 }
 
-func VerifySignature(publicKey *rsa.PublicKey, data, signature []byte, algorithm SignatureAlgorithm) error {
+func VerifySignature(algorithm SignatureAlgorithm, publicKey *rsa.PublicKey, data, signature []byte) error {
 	switch algorithm {
 	case SignatureAlgorithm_SHA512WITHRSA:
 		return rsa.VerifyPKCS1v15(publicKey, crypto.SHA512, data, signature)

@@ -48,7 +48,7 @@ type BCClient interface {
 	HasAccount() bool
 	HasNode() bool
 
-	PublicKey(string) ([]byte, cryptogo.PublicKeyFormat, error)
+	PublicKey(string) (cryptogo.PublicKeyFormat, []byte, error)
 	Head(string) ([]byte, error)
 	Chain(string, func([]byte, *bcgo.Block) error) error
 	Block(string, []byte) (*bcgo.Block, error)
@@ -209,14 +209,14 @@ func (c *bcClient) HasNode() bool {
 	return c.node != nil && !reflect.ValueOf(c.node).IsNil()
 }
 
-func (c *bcClient) PublicKey(alias string) ([]byte, cryptogo.PublicKeyFormat, error) {
+func (c *bcClient) PublicKey(alias string) (cryptogo.PublicKeyFormat, []byte, error) {
 	cache, err := c.Cache()
 	if err != nil {
-		return nil, cryptogo.PublicKeyFormat_UNKNOWN_PUBLIC_KEY_FORMAT, err
+		return cryptogo.PublicKeyFormat_UNKNOWN_PUBLIC_KEY_FORMAT, nil, err
 	}
 	network, err := c.Network()
 	if err != nil {
-		return nil, cryptogo.PublicKeyFormat_UNKNOWN_PUBLIC_KEY_FORMAT, err
+		return cryptogo.PublicKeyFormat_UNKNOWN_PUBLIC_KEY_FORMAT, nil, err
 	}
 	// Open Alias Channel
 	aliases := aliasgo.OpenAliasChannel()
@@ -226,13 +226,13 @@ func (c *bcClient) PublicKey(alias string) ([]byte, cryptogo.PublicKeyFormat, er
 	// Get Public Key for Alias
 	publicKey, err := aliasgo.PublicKeyForAlias(aliases, cache, network, alias)
 	if err != nil {
-		return nil, cryptogo.PublicKeyFormat_UNKNOWN_PUBLIC_KEY_FORMAT, err
+		return cryptogo.PublicKeyFormat_UNKNOWN_PUBLIC_KEY_FORMAT, nil, err
 	}
 	publicKeyBytes, err := cryptogo.RSAPublicKeyToPKIXBytes(publicKey)
 	if err != nil {
-		return nil, cryptogo.PublicKeyFormat_UNKNOWN_PUBLIC_KEY_FORMAT, err
+		return cryptogo.PublicKeyFormat_UNKNOWN_PUBLIC_KEY_FORMAT, nil, err
 	}
-	return publicKeyBytes, cryptogo.PublicKeyFormat_PKIX, nil
+	return cryptogo.PublicKeyFormat_PKIX, publicKeyBytes, nil
 }
 
 func (c *bcClient) Head(name string) ([]byte, error) {
@@ -526,7 +526,7 @@ func (c *bcClient) ExportKeys(peer, alias string, password []byte) (string, erro
 
 func PrintIdentity(output io.Writer, identity bcgo.Identity) error {
 	fmt.Fprintln(output, identity.Alias())
-	bytes, format, err := identity.PublicKey()
+	format, bytes, err := identity.PublicKey()
 	if err != nil {
 		return err
 	}
