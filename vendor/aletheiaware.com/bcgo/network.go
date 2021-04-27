@@ -16,15 +16,11 @@
 
 package bcgo
 
-const (
-	ERROR_CHANNEL_OUT_OF_DATE = "Channel out of date"
-)
-
 type Network interface {
 	// Requests the head hash of the given channel
-	GetHead(channel string) (*Reference, error)
+	Head(channel string) (*Reference, error)
 	// Requests the block from the given reference
-	GetBlock(reference *Reference) (*Block, error)
+	Block(reference *Reference) (*Block, error)
 	// Broadcasts the channel update to the network
-	Broadcast(channel *Channel, cache Cache, hash []byte, block *Block) error
+	Broadcast(channel Channel, cache Cache, hash []byte, block *Block) error
 }

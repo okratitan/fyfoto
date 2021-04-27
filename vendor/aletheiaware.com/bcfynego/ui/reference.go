@@ -29,7 +29,7 @@ import (
 type ReferenceView struct {
 	widget.Form
 	ui        UI
-	client    *bcclientgo.BCClient
+	client    bcclientgo.BCClient
 	timestamp *TimestampLabel
 	channel   *Link
 	block     *Link
@@ -37,7 +37,7 @@ type ReferenceView struct {
 	index     *widget.Label
 }
 
-func NewReferenceView(ui UI, client *bcclientgo.BCClient) *ReferenceView {
+func NewReferenceView(ui UI, client bcclientgo.BCClient) *ReferenceView {
 	v := &ReferenceView{
 		ui:        ui,
 		client:    client,

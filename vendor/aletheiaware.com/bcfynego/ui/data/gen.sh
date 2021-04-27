@@ -17,5 +17,6 @@
 set -e
 set -x
 
-fyne bundle -name Logo -package data bc.svg > icon.go
+fyne bundle -name AW -package data aw.svg > icon.go
+fyne bundle -append -name Logo -package data bc.svg >> icon.go
 fyne bundle -append -name AccountIcon -package data account.svg >> icon.go

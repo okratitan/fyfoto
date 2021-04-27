@@ -19,13 +19,13 @@
 
 package bcclientgo
 
-func (c *BCClient) GetRoot() (string, error) {
-	if c.Root == "" {
+func (c *bcClient) Root() (string, error) {
+	if c.root == "" {
 		root, err := rootDir()
 		if err != nil {
 			return "", err
 		}
-		c.Root = root
+		c.root = root
 	}
-	return c.Root, nil
+	return c.root, nil
 }

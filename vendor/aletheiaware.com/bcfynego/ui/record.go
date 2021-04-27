@@ -31,7 +31,7 @@ import (
 type RecordView struct {
 	widget.Form
 	ui                   UI
-	client               *bcclientgo.BCClient
+	client               bcclientgo.BCClient
 	hash                 *widget.Label
 	timestamp            *TimestampLabel
 	creator              *Link
@@ -45,7 +45,7 @@ type RecordView struct {
 	meta                 *fyne.Container
 }
 
-func NewRecordView(ui UI, client *bcclientgo.BCClient) *RecordView {
+func NewRecordView(ui UI, client bcclientgo.BCClient) *RecordView {
 	v := &RecordView{
 		ui:     ui,
 		client: client,
@@ -123,7 +123,7 @@ func NewRecordView(ui UI, client *bcclientgo.BCClient) *RecordView {
 
 func (v *RecordView) SetURI(uri storage.RecordURI) error {
 	name := uri.Channel()
-	node, err := v.client.GetNode()
+	node, err := v.client.Node()
 	if err != nil {
 		return err
 	}
@@ -131,9 +131,9 @@ func (v *RecordView) SetURI(uri storage.RecordURI) error {
 	recordHash := uri.RecordHash()
 	var block *bcgo.Block
 	if blockHash == nil || len(blockHash) == 0 {
-		block, err = bcgo.GetBlockContainingRecord(name, node.Cache, node.Network, recordHash)
+		block, err = bcgo.LoadBlockContainingRecord(name, node.Cache(), node.Network(), recordHash)
 	} else {
-		block, err = bcgo.GetBlock(name, node.Cache, node.Network, blockHash)
+		block, err = bcgo.LoadBlock(name, node.Cache(), node.Network(), blockHash)
 	}
 	if err != nil {
 		return err

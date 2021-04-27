@@ -20,8 +20,8 @@ package bcclientgo
 
 import "os"
 
-func (c *BCClient) GetRoot() (string, error) {
-	if c.Root == "" {
+func (c *bcClient) Root() (string, error) {
+	if c.root == "" {
 		if _, ok := os.LookupEnv("ROOT_DIRECTORY"); !ok {
 			os.Setenv("ROOT_DIRECTORY", os.Getenv("FILESDIR"))
 		}
@@ -32,9 +32,9 @@ func (c *BCClient) GetRoot() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		c.Root = root
+		c.root = root
 	}
-	return c.Root, nil
+	return c.root, nil
 }
 
 //func (c *BCClient) RecordCameraWriteToBC()

@@ -22,13 +22,13 @@ import (
 
 type SpaceThumbnailTable struct {
 	*thumbnailTable
-	client     *spaceclientgo.SpaceClient
-	node       *bcgo.Node
+	client     spaceclientgo.SpaceClient
+	node       bcgo.Node
 	metas      map[string]*spacego.Meta
 	timestamps map[string]uint64
 }
 
-func NewSpaceThumbnailTable(client *spaceclientgo.SpaceClient, callback func(id string, timestamp uint64, meta *spacego.Meta)) *SpaceThumbnailTable {
+func NewSpaceThumbnailTable(client spaceclientgo.SpaceClient, callback func(id string, timestamp uint64, meta *spacego.Meta)) *SpaceThumbnailTable {
 	t := &SpaceThumbnailTable{
 		thumbnailTable: newThumbnailTable(),
 		client:         client,
@@ -89,9 +89,9 @@ func (t *SpaceThumbnailTable) Clear() {
 	t.Refresh()
 }
 
-func (t *SpaceThumbnailTable) Update(node *bcgo.Node) error {
+func (t *SpaceThumbnailTable) Update(node bcgo.Node) error {
 	t.node = node
-	if err := t.client.List(node, t.AddMeta); err != nil {
+	if err := t.client.AllMetas(node, t.AddMeta); err != nil {
 		return err
 	}
 	t.Refresh()

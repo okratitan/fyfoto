@@ -29,7 +29,7 @@ var (
 
 type UI interface {
 	ShowError(error)
-	ShowURI(*bcclientgo.BCClient, fyne.URI)
+	ShowURI(bcclientgo.BCClient, fyne.URI)
 }
 
 func ShortcutFocused(s fyne.Shortcut, w fyne.Window) {

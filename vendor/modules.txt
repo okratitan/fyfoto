@@ -1,30 +1,37 @@
-# aletheiaware.com/aliasgo v1.1.3
+# aletheiaware.com/aliasgo v1.2.3
 aletheiaware.com/aliasgo
-# aletheiaware.com/bcclientgo v1.1.4
+# aletheiaware.com/bcclientgo v1.2.3
 aletheiaware.com/bcclientgo
-# aletheiaware.com/bcfynego v1.1.7
+# aletheiaware.com/bcfynego v1.2.3
 aletheiaware.com/bcfynego
 aletheiaware.com/bcfynego/storage
 aletheiaware.com/bcfynego/ui
 aletheiaware.com/bcfynego/ui/account
 aletheiaware.com/bcfynego/ui/data
-# aletheiaware.com/bcgo v1.1.4
+# aletheiaware.com/bcgo v1.2.3
 aletheiaware.com/bcgo
-# aletheiaware.com/cryptogo v1.1.1
+aletheiaware.com/bcgo/account
+aletheiaware.com/bcgo/cache
+aletheiaware.com/bcgo/channel
+aletheiaware.com/bcgo/identity
+aletheiaware.com/bcgo/network
+aletheiaware.com/bcgo/node
+aletheiaware.com/bcgo/validation
+# aletheiaware.com/cryptogo v1.2.2
 aletheiaware.com/cryptogo
-# aletheiaware.com/financego v1.1.3
+# aletheiaware.com/financego v1.2.3
 aletheiaware.com/financego
-# aletheiaware.com/spaceclientgo v1.1.5
+# aletheiaware.com/spaceclientgo v1.2.4
 aletheiaware.com/spaceclientgo
-# aletheiaware.com/spacefynego v1.1.4
+# aletheiaware.com/spacefynego v1.2.4
 aletheiaware.com/spacefynego
 aletheiaware.com/spacefynego/storage
 aletheiaware.com/spacefynego/ui
 aletheiaware.com/spacefynego/ui/data
 aletheiaware.com/spacefynego/ui/viewer
-# aletheiaware.com/spacego v1.1.4
+# aletheiaware.com/spacego v1.2.4
 aletheiaware.com/spacego
-# fyne.io/fyne/v2 v2.0.0
+# fyne.io/fyne/v2 v2.0.2
 fyne.io/fyne/v2
 fyne.io/fyne/v2/app
 fyne.io/fyne/v2/canvas
@@ -58,7 +65,7 @@ github.com/davecgh/go-spew/spew
 github.com/fredbi/uri
 # github.com/fsnotify/fsnotify v1.4.9
 github.com/fsnotify/fsnotify
-# github.com/fyne-io/mobile v0.1.2
+# github.com/fyne-io/mobile v0.1.3-0.20210318200029-09e9c4e13a8f
 github.com/fyne-io/mobile/app
 github.com/fyne-io/mobile/app/internal/callfn
 github.com/fyne-io/mobile/event/key
@@ -73,7 +80,7 @@ github.com/fyne-io/mobile/internal/mobileinit
 # github.com/go-gl/gl v0.0.0-20190320180904-bf2b1f2f34d7
 github.com/go-gl/gl/v3.1/gles2
 github.com/go-gl/gl/v3.2-core/gl
-# github.com/go-gl/glfw/v3.3/glfw v0.0.0-20200625191551-73d3c3675aa3
+# github.com/go-gl/glfw/v3.3/glfw v0.0.0-20210311203641-62640a716d48
 github.com/go-gl/glfw/v3.3/glfw
 github.com/go-gl/glfw/v3.3/glfw/glfw/deps
 github.com/go-gl/glfw/v3.3/glfw/glfw/deps/glad
@@ -87,7 +94,7 @@ github.com/godbus/dbus/v5
 github.com/goki/freetype
 github.com/goki/freetype/raster
 github.com/goki/freetype/truetype
-# github.com/golang/protobuf v1.4.3
+# github.com/golang/protobuf v1.5.2
 github.com/golang/protobuf/proto
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
@@ -106,28 +113,28 @@ github.com/stripe/stripe-go/form
 github.com/stripe/stripe-go/sub
 github.com/stripe/stripe-go/usagerecord
 github.com/stripe/stripe-go/webhook
-# golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
+# golang.org/x/crypto v0.0.0-20210415154028-4f45737414dc
 golang.org/x/crypto/ssh/terminal
-# golang.org/x/image v0.0.0-20201208152932-35266b937fa6
+# golang.org/x/image v0.0.0-20210220032944-ac19c3e999fb
 golang.org/x/image/colornames
 golang.org/x/image/draw
 golang.org/x/image/font
 golang.org/x/image/math/f64
 golang.org/x/image/math/fixed
 golang.org/x/image/vector
-# golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e
+# golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
 golang.org/x/net/html
 golang.org/x/net/html/atom
 golang.org/x/net/html/charset
-# golang.org/x/sys v0.0.0-20200720211630-cb9d2d5c5666
+# golang.org/x/sys v0.0.0-20201119102817-f84b799fce68
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
-# golang.org/x/term v0.0.0-20201117132131-f5c789dd3221
+# golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
 golang.org/x/term
-# golang.org/x/text v0.3.2
+# golang.org/x/text v0.3.3
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
 golang.org/x/text/encoding/htmlindex
@@ -145,7 +152,7 @@ golang.org/x/text/internal/utf8internal
 golang.org/x/text/language
 golang.org/x/text/runes
 golang.org/x/text/transform
-# google.golang.org/protobuf v1.23.0
+# google.golang.org/protobuf v1.26.0
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
 google.golang.org/protobuf/internal/descfmt
@@ -156,22 +163,22 @@ google.golang.org/protobuf/internal/encoding/messageset
 google.golang.org/protobuf/internal/encoding/tag
 google.golang.org/protobuf/internal/encoding/text
 google.golang.org/protobuf/internal/errors
-google.golang.org/protobuf/internal/fieldnum
-google.golang.org/protobuf/internal/fieldsort
 google.golang.org/protobuf/internal/filedesc
 google.golang.org/protobuf/internal/filetype
 google.golang.org/protobuf/internal/flags
-google.golang.org/protobuf/internal/genname
+google.golang.org/protobuf/internal/genid
 google.golang.org/protobuf/internal/impl
-google.golang.org/protobuf/internal/mapsort
+google.golang.org/protobuf/internal/order
 google.golang.org/protobuf/internal/pragma
 google.golang.org/protobuf/internal/set
 google.golang.org/protobuf/internal/strs
 google.golang.org/protobuf/internal/version
 google.golang.org/protobuf/proto
+google.golang.org/protobuf/reflect/protodesc
 google.golang.org/protobuf/reflect/protoreflect
 google.golang.org/protobuf/reflect/protoregistry
 google.golang.org/protobuf/runtime/protoiface
 google.golang.org/protobuf/runtime/protoimpl
+google.golang.org/protobuf/types/descriptorpb
 # gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
 gopkg.in/yaml.v3

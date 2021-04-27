@@ -17,10 +17,10 @@
 package bcgo
 
 type Cache interface {
-	GetHead(channel string) (*Reference, error)
-	GetBlock(hash []byte) (*Block, error)
-	GetBlockEntries(channel string, timestamp uint64) ([]*BlockEntry, error)
-	GetBlockContainingRecord(channel string, hash []byte) (*Block, error)
+	Head(channel string) (*Reference, error)
+	Block(hash []byte) (*Block, error)
+	BlockEntries(channel string, timestamp uint64) ([]*BlockEntry, error)
+	BlockContainingRecord(channel string, hash []byte) (*Block, error)
 	PutHead(channel string, reference *Reference) error
 	PutBlock(hash []byte, block *Block) error
 	PutBlockEntry(channel string, entry *BlockEntry) error

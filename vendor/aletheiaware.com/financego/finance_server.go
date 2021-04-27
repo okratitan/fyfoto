@@ -19,34 +19,28 @@ package financego
 import (
 	"aletheiaware.com/aliasgo"
 	"aletheiaware.com/bcgo"
-	"crypto/rsa"
 	"github.com/golang/protobuf/proto"
 	"log"
 )
 
-func Register(merchant *bcgo.Node, processor Processor, aliases, registrations *bcgo.Channel, threshold uint64, listener bcgo.MiningListener) func(string, string, string) (string, *bcgo.Reference, error) {
+func Register(merchant bcgo.Node, processor Processor, aliases, registrations bcgo.Channel, threshold uint64, listener bcgo.MiningListener) func(string, string, string) (string, *bcgo.Reference, error) {
 	return func(customerAlias, customerEmail, customerToken string) (string, *bcgo.Reference, error) {
-		cache := merchant.Cache
-		network := merchant.Network
+		merchantAlias := merchant.Account().Alias()
+		cache := merchant.Cache()
+		network := merchant.Network()
 
 		if err := aliases.Refresh(cache, network); err != nil {
 			log.Println(err)
 		}
 
-		// Get rsa.PublicKey for Alias
-		publicKey, err := aliasgo.GetPublicKey(aliases, cache, network, customerAlias)
-		if err != nil {
-			return "", nil, err
-		}
-
 		// Create list of access (user + server)
-		acl := map[string]*rsa.PublicKey{
-			customerAlias:  publicKey,
-			merchant.Alias: &merchant.Key.PublicKey,
-		}
-		log.Println("Access", acl)
+		access := aliasgo.PublicKeysForAliases(aliases, cache, network, []string{
+			customerAlias,
+			merchantAlias,
+		})
+		log.Println("Access", access)
 
-		registration, err := processor.NewRegistration(merchant.Alias, customerAlias, customerEmail, customerToken, customerAlias+" "+merchant.Alias)
+		registration, err := processor.NewRegistration(merchantAlias, customerAlias, customerEmail, customerToken, customerAlias+" "+merchantAlias)
 		if err != nil {
 			return "", nil, err
 		}
@@ -60,12 +54,12 @@ func Register(merchant *bcgo.Node, processor Processor, aliases, registrations *
 			log.Println(err)
 		}
 
-		_, err = merchant.Write(bcgo.Timestamp(), registrations, acl, nil, registrationData)
+		_, err = merchant.Write(bcgo.Timestamp(), registrations, access, nil, registrationData)
 		if err != nil {
 			return "", nil, err
 		}
 
-		registrationHash, registrationBlock, err := merchant.Mine(registrations, threshold, listener)
+		registrationHash, registrationBlock, err := bcgo.Mine(merchant, registrations, threshold, listener)
 		if err != nil {
 			return "", nil, err
 		}
@@ -88,29 +82,24 @@ func Register(merchant *bcgo.Node, processor Processor, aliases, registrations *
 	}
 }
 
-func Subscribe(merchant *bcgo.Node, processor Processor, aliases, subscriptions *bcgo.Channel, threshold uint64, listener bcgo.MiningListener, productId, planId string) func(string, string) (string, *bcgo.Reference, error) {
+func Subscribe(merchant bcgo.Node, processor Processor, aliases, subscriptions bcgo.Channel, threshold uint64, listener bcgo.MiningListener, productId, planId string) func(string, string) (string, *bcgo.Reference, error) {
 	return func(customerAlias, customerID string) (string, *bcgo.Reference, error) {
-		cache := merchant.Cache
-		network := merchant.Network
+		merchantAlias := merchant.Account().Alias()
+		cache := merchant.Cache()
+		network := merchant.Network()
 
 		if err := aliases.Refresh(cache, network); err != nil {
 			log.Println(err)
 		}
 
-		// Get rsa.PublicKey for Alias
-		publicKey, err := aliasgo.GetPublicKey(aliases, cache, network, customerAlias)
-		if err != nil {
-			return "", nil, err
-		}
-
 		// Create list of access (user + server)
-		acl := map[string]*rsa.PublicKey{
-			customerAlias:  publicKey,
-			merchant.Alias: &merchant.Key.PublicKey,
-		}
+		acl := aliasgo.PublicKeysForAliases(aliases, cache, network, []string{
+			customerAlias,
+			merchantAlias,
+		})
 		log.Println("Access", acl)
 
-		subscription, err := processor.NewSubscription(merchant.Alias, customerAlias, customerID, "", productId, planId)
+		subscription, err := processor.NewSubscription(merchantAlias, customerAlias, customerID, "", productId, planId)
 		if err != nil {
 			return "", nil, err
 		}
@@ -129,7 +118,7 @@ func Subscribe(merchant *bcgo.Node, processor Processor, aliases, subscriptions 
 			return "", nil, err
 		}
 
-		subscriptionHash, subscriptionBlock, err := merchant.Mine(subscriptions, threshold, listener)
+		subscriptionHash, subscriptionBlock, err := bcgo.Mine(merchant, subscriptions, threshold, listener)
 		if err != nil {
 			return "", nil, err
 		}

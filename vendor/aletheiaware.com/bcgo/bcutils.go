@@ -20,9 +20,6 @@ package bcgo
 import (
 	"aletheiaware.com/cryptogo"
 	"bufio"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/sha512"
 	"errors"
 	"fmt"
 	"github.com/golang/protobuf/proto"
@@ -32,7 +29,7 @@ import (
 	"math/bits"
 	"os"
 	"os/user"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -139,14 +136,14 @@ func MoneyToString(currency string, amount int64) string {
 }
 
 func IsLive() bool {
-	return GetBooleanFlag(LIVE_FLAG)
+	return BooleanFlag(LIVE_FLAG)
 }
 
 func IsBeta() bool {
-	return GetBooleanFlag(BETA_FLAG)
+	return BooleanFlag(BETA_FLAG)
 }
 
-func GetBooleanFlag(name string) bool {
+func BooleanFlag(name string) bool {
 	flag, ok := os.LookupEnv(name)
 	if !ok {
 		return false
@@ -158,18 +155,18 @@ func GetBooleanFlag(name string) bool {
 	return b
 }
 
-func GetBCHost() string {
+func BCHost() string {
 	if IsLive() {
 		return BC_HOST
 	}
 	return BC_HOST_TEST
 }
 
-func GetBCWebsite() string {
-	return "https://" + GetBCHost()
+func BCWebsite() string {
+	return "https://" + BCHost()
 }
 
-func GetAlias() (string, error) {
+func Alias() (string, error) {
 	alias, ok := os.LookupEnv("ALIAS")
 	if !ok {
 		u, err := user.Current()
@@ -181,22 +178,25 @@ func GetAlias() (string, error) {
 	return alias, nil
 }
 
-func GetRootDirectory() (string, error) {
+func RootDirectory() (string, error) {
 	root, ok := os.LookupEnv("ROOT_DIRECTORY")
 	if !ok {
 		u, err := user.Current()
 		if err != nil {
 			return "", err
 		}
-		root = path.Join(u.HomeDir, "bc")
+		root = filepath.Join(u.HomeDir, "bc")
+		if _, err := os.Stat(root); os.IsNotExist(err) {
+			root = RootDirectoryForUser(u)
+		}
 	}
 	return root, nil
 }
 
-func GetKeyDirectory(directory string) (string, error) {
+func KeyDirectory(directory string) (string, error) {
 	keystore, ok := os.LookupEnv("KEYS_DIRECTORY")
 	if !ok {
-		keystore = path.Join(directory, "keys")
+		keystore = filepath.Join(directory, "keys")
 	}
 	if err := os.MkdirAll(keystore, os.ModePerm); err != nil {
 		return "", err
@@ -204,18 +204,18 @@ func GetKeyDirectory(directory string) (string, error) {
 	return keystore, nil
 }
 
-func GetCacheDirectory(directory string) (string, error) {
+func CacheDirectory(directory string) (string, error) {
 	cache, ok := os.LookupEnv("CACHE_DIRECTORY")
 	if !ok {
-		cache = path.Join(directory, "cache")
+		cache = filepath.Join(directory, "cache")
 	}
 	return cache, nil
 }
 
-func GetCertificateDirectory(directory string) (string, error) {
+func CertificateDirectory(directory string) (string, error) {
 	certs, ok := os.LookupEnv("CERTIFICATE_DIRECTORY")
 	if !ok {
-		certs = path.Join(directory, "certificates")
+		certs = filepath.Join(directory, "certificates")
 	}
 	return certs, nil
 }
@@ -230,7 +230,7 @@ func LoadConfig() error {
 		return err
 	}
 	// Load Root Config
-	directory, err = GetRootDirectory()
+	directory, err = RootDirectory()
 	if err != nil {
 		return err
 	}
@@ -241,9 +241,9 @@ func LoadConfig() error {
 }
 
 func ReadConfig(directory string) error {
-	filepath := path.Join(directory, ".bc")
-	if _, err := os.Stat(filepath); err == nil {
-		file, err := os.Open(filepath)
+	path := filepath.Join(directory, "config")
+	if _, err := os.Stat(path); err == nil {
+		file, err := os.Open(path)
 		if err != nil {
 			return err
 		}
@@ -267,12 +267,12 @@ func ReadConfig(directory string) error {
 func SetupLogging(directory string) (*os.File, error) {
 	store, ok := os.LookupEnv("LOG_DIRECTORY")
 	if !ok {
-		store = path.Join(directory, "logs")
+		store = filepath.Join(directory, "logs")
 	}
 	if err := os.MkdirAll(store, os.ModePerm); err != nil {
 		return nil, err
 	}
-	logFile, err := os.OpenFile(path.Join(store, time.Now().UTC().Format(time.RFC3339)), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
+	logFile, err := os.OpenFile(filepath.Join(store, time.Now().UTC().Format(time.RFC3339)), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
 		return nil, err
 	}
@@ -281,7 +281,7 @@ func SetupLogging(directory string) (*os.File, error) {
 	return logFile, nil
 }
 
-func GetPeers(directory string) ([]string, error) {
+func Peers(directory string) ([]string, error) {
 	env, ok := os.LookupEnv("PEERS")
 	if ok {
 		return SplitRemoveEmpty(env, ","), nil
@@ -290,7 +290,7 @@ func GetPeers(directory string) ([]string, error) {
 		if IsLive() {
 			filename = "peers"
 		}
-		filepath := path.Join(directory, filename)
+		filepath := filepath.Join(directory, filename)
 		if _, err := os.Stat(filepath); os.IsNotExist(err) {
 			return []string{}, nil
 		}
@@ -320,7 +320,7 @@ func AddPeer(directory, peer string) error {
 	if IsLive() {
 		filename = "peers"
 	}
-	file, err := os.OpenFile(path.Join(directory, filename), os.O_APPEND|os.O_CREATE|os.O_WRONLY, os.ModePerm)
+	file, err := os.OpenFile(filepath.Join(directory, filename), os.O_APPEND|os.O_CREATE|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -331,31 +331,8 @@ func AddPeer(directory, peer string) error {
 	return nil
 }
 
-func DecryptRecord(entry *BlockEntry, access *Record_Access, key *rsa.PrivateKey, callback func(*BlockEntry, []byte, []byte) error) error {
-	decryptedKey, err := cryptogo.DecryptKey(access.EncryptionAlgorithm, access.SecretKey, key)
-	if err != nil {
-		return err
-	}
-	record := entry.Record
-	switch record.EncryptionAlgorithm {
-	case cryptogo.EncryptionAlgorithm_AES_128_GCM_NOPADDING:
-		fallthrough
-	case cryptogo.EncryptionAlgorithm_AES_256_GCM_NOPADDING:
-		decryptedPayload, err := cryptogo.DecryptAESGCM(decryptedKey, record.Payload)
-		if err != nil {
-			return err
-		}
-		// Call callback
-		return callback(entry, decryptedKey, decryptedPayload)
-	case cryptogo.EncryptionAlgorithm_UNKNOWN_ENCRYPTION:
-		return callback(entry, nil, record.Payload)
-	default:
-		return fmt.Errorf(cryptogo.ERROR_UNSUPPORTED_ENCRYPTION, record.EncryptionAlgorithm.String())
-	}
-}
-
 // Chunk the data from reader into individual records with their own secret key and access list
-func CreateRecords(creatorAlias string, creatorKey *rsa.PrivateKey, access map[string]*rsa.PublicKey, references []*Reference, reader io.Reader, callback func([]byte, *Record) error) (int, error) {
+func CreateRecords(creator Account, access []Identity, references []*Reference, reader io.Reader, callback func([]byte, *Record) error) (int, error) {
 	payload := make([]byte, MAX_PAYLOAD_SIZE_BYTES)
 	size := 0
 	for {
@@ -369,7 +346,7 @@ func CreateRecords(creatorAlias string, creatorKey *rsa.PrivateKey, access map[s
 			}
 		}
 		size = size + count
-		key, record, err := CreateRecord(Timestamp(), creatorAlias, creatorKey, access, references, payload[:count])
+		key, record, err := CreateRecord(Timestamp(), creator, access, references, payload[:count])
 		if err != nil {
 			return 0, err
 		}
@@ -380,7 +357,7 @@ func CreateRecords(creatorAlias string, creatorKey *rsa.PrivateKey, access map[s
 	return size, nil
 }
 
-func CreateRecord(timestamp uint64, creatorAlias string, creatorKey *rsa.PrivateKey, access map[string]*rsa.PublicKey, references []*Reference, payload []byte) ([]byte, *Record, error) {
+func CreateRecord(timestamp uint64, creator Account, access []Identity, references []*Reference, payload []byte) ([]byte, *Record, error) {
 	size := uint64(len(payload))
 	if size > MAX_PAYLOAD_SIZE_BYTES {
 		return nil, nil, errors.New("Payload too large: " + BinarySizeToString(size) + " max: " + BinarySizeToString(MAX_PAYLOAD_SIZE_BYTES))
@@ -389,7 +366,7 @@ func CreateRecord(timestamp uint64, creatorAlias string, creatorKey *rsa.Private
 	// Create record
 	record := &Record{
 		Timestamp: timestamp,
-		Creator:   creatorAlias,
+		Creator:   creator.Alias(),
 		Reference: references,
 	}
 
@@ -408,15 +385,15 @@ func CreateRecord(timestamp uint64, creatorAlias string, creatorKey *rsa.Private
 		}
 
 		// Grant access to each public key
-		for a, k := range access {
-			secretKey, err := rsa.EncryptOAEP(sha512.New(), rand.Reader, k, key, nil)
+		for _, a := range access {
+			algorithm, encrypted, err := a.EncryptKey(key)
 			if err != nil {
 				return nil, nil, err
 			}
 			record.Access = append(record.Access, &Record_Access{
-				Alias:               a,
-				SecretKey:           secretKey,
-				EncryptionAlgorithm: cryptogo.EncryptionAlgorithm_RSA_ECB_OAEPPADDING,
+				Alias:               a.Alias(),
+				SecretKey:           encrypted,
+				EncryptionAlgorithm: algorithm,
 			})
 		}
 		record.EncryptionAlgorithm = cryptogo.EncryptionAlgorithm_AES_256_GCM_NOPADDING
@@ -424,11 +401,7 @@ func CreateRecord(timestamp uint64, creatorAlias string, creatorKey *rsa.Private
 		record.EncryptionAlgorithm = cryptogo.EncryptionAlgorithm_UNKNOWN_ENCRYPTION
 	}
 
-	// Hash payload
-	hashed := cryptogo.Hash(payload)
-
-	// Sign hash of encrypted payload
-	signature, err := cryptogo.CreateSignature(creatorKey, hashed, cryptogo.SignatureAlgorithm_SHA512WITHRSA_PSS)
+	algorithm, signature, err := creator.Sign(payload)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -436,7 +409,7 @@ func CreateRecord(timestamp uint64, creatorAlias string, creatorKey *rsa.Private
 	// Set payload and signature
 	record.Payload = payload
 	record.Signature = signature
-	record.SignatureAlgorithm = cryptogo.SignatureAlgorithm_SHA512WITHRSA_PSS
+	record.SignatureAlgorithm = algorithm
 
 	if l, ok := os.LookupEnv(LIVE_FLAG); ok {
 		record.Meta = map[string]string{

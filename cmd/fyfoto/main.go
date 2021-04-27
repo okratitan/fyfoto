@@ -29,8 +29,8 @@ type FyFoto struct {
 	localDirs    *widget.Tree
 	localImages  *ui.LocalThumbnailTable
 
-	spaceClient  *spaceclientgo.SpaceClient
-	spaceFyne    *spacefynego.SpaceFyne
+	spaceClient  spaceclientgo.SpaceClient
+	spaceFyne    spacefynego.SpaceFyne
 	spaceToolbar *widget.Toolbar
 	spaceImages  *ui.SpaceThumbnailTable
 
@@ -57,27 +57,24 @@ func main() {
 	flag.Parse()
 
 	ff := &FyFoto{
-		app:         app.New(),
+		app:         app.NewWithID("us.smhouston.fyfoto"),
 		spaceClient: spaceclientgo.NewSpaceClient(),
 	}
 	ff.rootDir = storage.NewFileURI(*dirPtr)
 	ff.window = ff.app.NewWindow("FyFoto")
 	ff.spaceFyne = spacefynego.NewSpaceFyne(ff.app, ff.window, ff.spaceClient)
-	onSignedIn := ff.spaceFyne.OnSignedIn
-	ff.spaceFyne.OnSignedIn = func(node *bcgo.Node) {
-		if onSignedIn != nil {
-			onSignedIn(node)
+	ff.spaceFyne.AddOnSignedIn(func(bcgo.Account) {
+		node, err := ff.spaceFyne.Node(ff.spaceClient)
+		if err != nil {
+			log.Println(err)
+			return
 		}
 		go populateSpaceWithNode(ff, node)
-	}
-	onSignedOut := ff.spaceFyne.OnSignedOut
-	ff.spaceFyne.OnSignedOut = func() {
-		if onSignedOut != nil {
-			onSignedOut()
-		}
+	})
+	ff.spaceFyne.AddOnSignedOut(func() {
 		ff.spaceImages.Clear()
 		ff.bInfo.SetText("")
-	}
+	})
 
 	createBrowser(ff)
 	createViewer(ff)
