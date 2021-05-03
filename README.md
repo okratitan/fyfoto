@@ -8,7 +8,8 @@ Built using the [Fyne](https://fyne.io) toolkit.
 
 ### Usage
 ```sh
-go get -u github.com/okratitan/fyfoto/cmd/fyfoto
+go get -u fyne.io/fyne/v2/cmd/fyne
+fyne get github.com/okratitan/fyfoto/cmd/fyfoto
 fyfoto
 ```
 
